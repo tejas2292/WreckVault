@@ -54,12 +54,12 @@ WreckVault is a modern, self-hosted password manager built for those who want **
 
 ## 📸 Screenshots
 
-| Login Screen | Vault Dashboard |
-| :---: | :---: |
-| <img width="1916" height="913" alt="1" src="https://github.com/user-attachments/assets/259d9e61-0ecf-49db-a5bd-a0279938318b" />
- | <img width="1918" height="915" alt="2" src="https://github.com/user-attachments/assets/4de5adc2-f27e-4f1c-a4c3-41d629d08014" />
- |
-
+| Login Screen |
+| :---: |
+| <img width="1916" height="913" alt="1" src="https://github.com/user-attachments/assets/259d9e61-0ecf-49db-a5bd-a0279938318b" /> |
+| Vault Dashboard |
+| :---: |
+| <img width="1918" height="915" alt="2" src="https://github.com/user-attachments/assets/4de5adc2-f27e-4f1c-a4c3-41d629d08014" />
 ## 🛠️ Security Model
 
 1.  **User enters Master Password.**
