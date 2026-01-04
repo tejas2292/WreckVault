@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useVault } from '../contexts/VaultContext';
 import { X, Save, Eye, EyeOff } from 'lucide-react';
 
-const PasswordModal = ({ onClose }) => {
-  const { addEntry } = useVault();
+const PasswordModal = ({ onClose, initialData = null }) => {
+  const { addEntry, updateEntry } = useVault();
   const [formData, setFormData] = useState({
-    service_name: '',
-    account_username: '',
-    password: ''
+    service_name: initialData?.service_name || '',
+    account_username: initialData?.account_username || '',
+    password: initialData?.password || ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -15,7 +15,14 @@ const PasswordModal = ({ onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const success = await addEntry(formData);
+    let success;
+    
+    if (initialData) {
+      success = await updateEntry(initialData.id, formData);
+    } else {
+      success = await addEntry(formData);
+    }
+
     setLoading(false);
     if (success) onClose();
   };
@@ -24,7 +31,7 @@ const PasswordModal = ({ onClose }) => {
     <div className="modal-overlay">
       <div className="modal-card">
         <div className="modal-header">
-          <h3>Add New Password</h3>
+          <h3>{initialData ? 'Edit Password' : 'Add New Password'}</h3>
           <button onClick={onClose} className="close-btn"><X size={24} /></button>
         </div>
         <form onSubmit={handleSubmit}>

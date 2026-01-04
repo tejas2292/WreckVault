@@ -1,8 +1,8 @@
 import React from 'react';
 import { useVault } from '../contexts/VaultContext';
-import { Copy, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Copy, Trash2, Eye, EyeOff, Pen } from 'lucide-react';
 
-const PasswordCard = ({ entry }) => {
+const PasswordCard = ({ entry, onEdit }) => {
   const { deleteEntry } = useVault();
   const [revealed, setRevealed] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -11,6 +11,10 @@ const PasswordCard = ({ entry }) => {
     navigator.clipboard.writeText(entry.password);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+  
+  const handleEdit = () => {
+    onEdit(entry);
   };
 
   const handleDelete = () => {
@@ -47,6 +51,10 @@ const PasswordCard = ({ entry }) => {
           <Copy size={16} />
           {copied ? 'Copied' : 'Copy'}
         </button>
+        <button className="action-btn" onClick={handleEdit}>
+          <Pen size={16} />
+          Edit
+        </button>
         <button className="action-btn delete" onClick={handleDelete}>
           <Trash2 size={16} />
         </button>
@@ -55,7 +63,7 @@ const PasswordCard = ({ entry }) => {
   );
 };
 
-const PasswordList = ({ searchQuery }) => {
+const PasswordList = ({ searchQuery, onEditEntry }) => {
   const { entries, isLoading, error } = useVault();
 
   if (isLoading && entries.length === 0) return <div className="loading">Loading vault...</div>;
@@ -77,7 +85,7 @@ const PasswordList = ({ searchQuery }) => {
   return (
     <div className="password-grid">
       {filteredEntries.map(entry => (
-        <PasswordCard key={entry.id} entry={entry} />
+        <PasswordCard key={entry.id} entry={entry} onEdit={onEditEntry} />
       ))}
     </div>
   );

@@ -78,6 +78,35 @@ export const VaultProvider = ({ children }) => {
     }
   };
 
+  const updateEntry = async (id, entryData) => {
+    // encrypt password
+    const cipher = encrypt(entryData.password, masterPassword);
+    
+    try {
+      const response = await api.put(`/vault/${id}`, {
+        service_name: entryData.service_name,
+        account_username: entryData.account_username,
+        encrypted_blob: cipher,
+        iv: 'embedded-in-blob'
+      }, { 
+         headers: { 'x-user-id': user.id } 
+      });
+
+      const updatedServerEntry = response.data;
+      const updatedLocalEntry = {
+        ...updatedServerEntry,
+        password: entryData.password
+      };
+      
+      setEntries(entries.map(e => e.id === id ? updatedLocalEntry : e));
+      return true;
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update entry");
+      return false;
+    }
+  };
+
   const deleteEntry = async (id) => {
     try {
       await api.delete(`/vault/${id}`, { 
@@ -93,7 +122,7 @@ export const VaultProvider = ({ children }) => {
   };
 
   return (
-    <VaultContext.Provider value={{ entries, isLoading, error, addEntry, deleteEntry, refresh: fetchEntries }}>
+    <VaultContext.Provider value={{ entries, isLoading, error, addEntry, updateEntry, deleteEntry, refresh: fetchEntries }}>
       {children}
     </VaultContext.Provider>
   );
