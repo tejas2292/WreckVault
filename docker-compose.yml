@@ -1,32 +1,17 @@
 version: '3.8'
 
 services:
-  postgres-db:
-    image: postgres:15-alpine
-    container_name: password-manager-db
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: wreckvault
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - wreckcloud
-
   backend-api:
     build:
       context: ./server
       dockerfile: Dockerfile
     container_name: password-manager-api
     ports:
-      - "5000:5000"
+      - "3012:5000"
     environment:
       - PORT=5000
-      - DATABASE_URL=postgres://user:password@postgres-db:5432/wreckvault
-    depends_on:
-      - postgres-db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./server:/app
       - /app/node_modules
@@ -40,7 +25,7 @@ services:
       dockerfile: Dockerfile
     container_name: password-manager-client
     ports:
-      - "3000:3000" # Vite default
+      - "3011:3000" # Vite default
     volumes:
       - ./client:/app
       - /app/node_modules
@@ -50,9 +35,6 @@ services:
       - wreckcloud
     # We want development mode with Hot Reloading
     command: npm run dev -- --host
-
-volumes:
-  pgdata:
 
 networks:
   wreckcloud:
