@@ -4,7 +4,8 @@ import { useVault } from '../contexts/VaultContext';
 import PasswordList from './PasswordList';
 import PasswordModal from './PasswordModal';
 import ProfilePage from './ProfilePage';
-import { LogOut, Plus, Search, ShieldCheck, User as UserIcon, LayoutGrid } from 'lucide-react';
+import SettingsPage from './SettingsPage';
+import { LogOut, Plus, Search, ShieldCheck, User as UserIcon, LayoutGrid, Settings } from 'lucide-react';
 
 const VaultDashboard = () => {
   const { logout, user } = useAuth();
@@ -14,7 +15,7 @@ const VaultDashboard = () => {
   const [editingEntry, setEditingEntry] = useState(null);
   
   // Simple Router
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'profile'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'profile' | 'settings'
 
   const handleEditEntry = (entry) => {
     setEditingEntry(entry);
@@ -50,6 +51,15 @@ const VaultDashboard = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <UserIcon size={18} />
               <span>Profile</span>
+            </div>
+          </div>
+          <div 
+            className={`nav-item ${currentView === 'settings' ? 'active' : ''}`}
+            onClick={() => setCurrentView('settings')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Settings size={18} />
+              <span>Settings</span>
             </div>
           </div>
         </nav>
@@ -93,8 +103,10 @@ const VaultDashboard = () => {
               <PasswordList searchQuery={searchQuery} onEditEntry={handleEditEntry} />
             </div>
           </>
-        ) : (
+        ) : currentView === 'profile' ? (
           <ProfilePage />
+        ) : (
+          <SettingsPage />
         )}
       </main>
 

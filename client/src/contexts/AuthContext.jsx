@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [masterPassword, setMasterPassword] = useState(null);
   const [authError, setAuthError] = useState(null);
+  const [autoLockDuration, setAutoLockDuration] = useState(parseInt(localStorage.getItem('wreckvault_autolock') || '0')); // 0 = disabled
 
   // Persistence: Restore session on reload
   React.useEffect(() => {
@@ -19,6 +20,41 @@ export const AuthProvider = ({ children }) => {
       setMasterPassword(storedKey);
     }
   }, []);
+
+  // Auto-Lock Logic
+  React.useEffect(() => {
+    if (!user || autoLockDuration === 0) return;
+
+    let timer;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        console.log("Auto-locking vault due to inactivity...");
+        logout();
+        alert("Vault locked due to inactivity.");
+      }, autoLockDuration * 60 * 1000);
+    };
+
+    // Events to track activity
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('click', resetTimer);
+
+    // Initial start
+    resetTimer();
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      window.removeEventListener('click', resetTimer);
+    };
+  }, [user, autoLockDuration]);
+
+  const updateAutoLock = (minutes) => {
+    setAutoLockDuration(minutes);
+    localStorage.setItem('wreckvault_autolock', minutes.toString());
+  };
 
   const login = async (username, password) => {
     setAuthError(null);
@@ -41,6 +77,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (username, password) => {
+    // ... existing register ...
     setAuthError(null);
     try {
       const response = await api.post('/auth/register', { username, password });
@@ -67,7 +104,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, masterPassword, authError, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, masterPassword, authError, login, register, logout, updateUser, autoLockDuration, updateAutoLock }}>
       {children}
     </AuthContext.Provider>
   );
