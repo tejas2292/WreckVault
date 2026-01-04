@@ -55,7 +55,13 @@ const VaultDashboard = () => {
         </nav>
         <div className="sidebar-footer">
           <div className="user-info">
-            <div className="user-avatar">{user.username[0].toUpperCase()}</div>
+            <div className="user-avatar">
+              {user.profile_image ? (
+                <img src={user.profile_image} alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                user.username[0].toUpperCase()
+              )}
+            </div>
             <span>{user.username}</span>
           </div>
           <button onClick={logout} className="logout-btn" title="Logout">

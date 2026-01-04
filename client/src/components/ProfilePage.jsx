@@ -1,31 +1,73 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVault } from '../contexts/VaultContext';
-import { User, Shield, Calendar, Key, AlertTriangle } from 'lucide-react';
+import { User, Shield, Calendar, Key, AlertTriangle, Camera } from 'lucide-react';
+import api from '../api';
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { entries } = useVault();
+  const [isEditingImage, setIsEditingImage] = useState(false);
+  const [imageUrl, setImageUrl] = useState(user.profile_image || '');
   
   // Format date
   const joinDate = user?.created_at 
     ? new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
     : 'Recently';
 
-  const securityScore = Math.min(100, entries.length * 10); // Dummy score logic
+  const handleSaveImage = async () => {
+    try {
+      const res = await api.put('/auth/me', { profile_image: imageUrl }, {
+         headers: { 'x-user-id': user.id } 
+      });
+      updateUser({ profile_image: res.data.user.profile_image });
+      setIsEditingImage(false);
+    } catch (err) {
+      alert("Failed to update image");
+    }
+  };
 
   return (
     <div className="profile-container" style={{ padding: '3rem', maxWidth: '800px', margin: '0 auto' }}>
       <header className="profile-header" style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '3rem' }}>
         <div className="profile-avatar-large" style={{ 
           width: '100px', height: '100px', borderRadius: '50%', background: 'var(--accent-secondary)', 
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 'bold' 
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 'bold',
+          overflow: 'hidden', position: 'relative'
         }}>
-          {user.username[0].toUpperCase()}
+          {user.profile_image ? (
+            <img src={user.profile_image} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+             user.username[0].toUpperCase()
+          )}
+          
+          <button 
+            onClick={() => setIsEditingImage(!isEditingImage)}
+            style={{ 
+              position: 'absolute', bottom: 0, width: '100%', background: 'rgba(0,0,0,0.5)', 
+              border: 'none', color: 'white', cursor: 'pointer', padding: '5px' 
+            }}
+          >
+            <Camera size={16} style={{ display: 'block', margin: '0 auto' }} />
+          </button>
         </div>
+        
         <div>
           <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{user.username}</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Standard User</p>
+          
+          {isEditingImage && (
+            <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+              <input 
+                type="text" 
+                placeholder="Image URL..." 
+                value={imageUrl} 
+                onChange={e => setImageUrl(e.target.value)}
+                style={{ padding: '5px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'white' }}
+              />
+              <button onClick={handleSaveImage} className="btn-primary" style={{ padding: '5px 10px', fontSize: '0.8rem' }}>Save</button>
+            </div>
+          )}
         </div>
       </header>
 

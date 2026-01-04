@@ -24,21 +24,28 @@ const initDb = async (retries = 5) => {
         `);
 
         // Passwords Table (Vault Entries)
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS vault_entries (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            service_name VARCHAR(255) NOT NULL,
-            account_username VARCHAR(255),
-            encrypted_blob TEXT NOT NULL,
-            iv VARCHAR(255) NOT NULL, 
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          );
-        `);
-        
-        console.log("Database Schema Ready.");
-        return; // Success
+        await pool.query(`
+        CREATE TABLE IF NOT EXISTS vault_entries (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          service_name VARCHAR(255) NOT NULL,
+          account_username VARCHAR(255),
+          encrypted_blob TEXT NOT NULL,
+          iv VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Migration: Add profile_image to users if it doesn't exist
+      try {
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image TEXT;`);
+      } catch (e) {
+        console.log("Migration note: profile_image column might already exist or failed " + e.message);
+      }
+
+      console.log('Database Schema Ready.');
+      return; 
       } finally {
         client.release();
       }

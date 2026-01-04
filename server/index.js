@@ -85,13 +85,31 @@ app.get('/api/auth/me', async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    const userResult = await pool.query('SELECT id, username, created_at FROM users WHERE id = $1', [userId]);
+    const userResult = await pool.query('SELECT id, username, created_at, profile_image FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).json({ error: "User not found" });
 
     res.json({ user: userResult.rows[0] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Update User Profile
+app.put('/api/auth/me', async (req, res) => {
+  const userId = req.headers['x-user-id'];
+  const { profile_image } = req.body;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const result = await pool.query(
+      'UPDATE users SET profile_image = $1 WHERE id = $2 RETURNING id, username, created_at, profile_image',
+      [profile_image, userId]
+    );
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update profile" });
   }
 });
 
