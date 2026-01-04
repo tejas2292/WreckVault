@@ -25,7 +25,7 @@ const AuthScreens = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <Shield size={48} className="auth-icon" />
+          <img src="/logo.png" alt="WreckVault Logo" style={{ width: '64px', height: '64px', marginBottom: '1rem' }} />
           <h1>WreckVault</h1>
           <p>{isLogin ? 'Access your secure vault' : 'Create a new secure vault'}</p>
         </div>

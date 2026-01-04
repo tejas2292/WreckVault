@@ -31,7 +31,7 @@ const VaultDashboard = () => {
     <div className="dashboard-layout">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <ShieldCheck size={32} className="logo-icon" />
+          <img src="/logo.png" alt="Logo" style={{ width: '40px', height: '40px' }} />
           <h2>WreckVault</h2>
         </div>
         <nav className="sidebar-nav">
@@ -67,7 +67,7 @@ const VaultDashboard = () => {
           <div className="user-info">
             <div className="user-avatar">
               {user.profile_image ? (
-                <img src={user.profile_image} alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={user.profile_image} alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
               ) : (
                 user.username[0].toUpperCase()
               )}
