@@ -6,6 +6,7 @@ const PasswordCard = ({ entry, onEdit }) => {
   const { deleteEntry } = useVault();
   const [revealed, setRevealed] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+  const [imgError, setImgError] = React.useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(entry.password);
@@ -23,10 +24,45 @@ const PasswordCard = ({ entry, onEdit }) => {
     }
   };
 
+  // Smart Logo Logic
+  const getLogoUrl = (name) => {
+    try {
+      let domain = '';
+      
+      if (entry.website_url) {
+         domain = entry.website_url.toLowerCase().trim();
+         // Strip protocol if present for cleaner processing, though Google API handles it
+         domain = domain.replace(/^https?:\/\//, '');
+      } else {
+         // Fallback Heuristic
+         domain = name.toLowerCase().trim();
+         if (domain.includes(' ')) domain = domain.split(' ')[0];
+         if (!domain.includes('.')) domain += '.com';
+      }
+      
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const logoUrl = getLogoUrl(entry.service_name);
+
   return (
     <div className="password-card">
       <div className="card-header">
-        <div className="service-icon">{entry.service_name[0].toUpperCase()}</div>
+        <div className="service-icon" style={{ overflow: 'hidden', background: imgError ? 'var(--accent-primary)' : 'transparent' }}>
+          {!imgError ? (
+            <img 
+              src={logoUrl} 
+              alt={entry.service_name}
+              onError={() => setImgError(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          ) : (
+            entry.service_name[0].toUpperCase()
+          )}
+        </div>
         <div className="service-info">
           <h3>{entry.service_name}</h3>
           <p className="username">{entry.account_username}</p>

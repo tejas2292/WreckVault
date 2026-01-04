@@ -57,7 +57,8 @@ export const VaultProvider = ({ children }) => {
         service_name: entryData.service_name,
         account_username: entryData.account_username,
         encrypted_blob: cipher,
-        iv: 'embedded-in-blob' // CryptoJS embeds IV
+        iv: 'embedded-in-blob', // CryptoJS embeds IV
+        website_url: entryData.website_url
       }, { 
          headers: { 'x-user-id': user.id } 
       });
@@ -87,7 +88,8 @@ export const VaultProvider = ({ children }) => {
         service_name: entryData.service_name,
         account_username: entryData.account_username,
         encrypted_blob: cipher,
-        iv: 'embedded-in-blob'
+        iv: 'embedded-in-blob',
+        website_url: entryData.website_url
       }, { 
          headers: { 'x-user-id': user.id } 
       });

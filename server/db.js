@@ -44,6 +44,13 @@ const initDb = async (retries = 5) => {
         console.log("Migration note: profile_image column might already exist or failed " + e.message);
       }
 
+      // Migration: Add website_url to vault_entries
+      try {
+        await pool.query(`ALTER TABLE vault_entries ADD COLUMN IF NOT EXISTS website_url VARCHAR(255);`);
+      } catch (e) {
+         console.log("Migration note: website_url column might already exist " + e.message);
+      }
+
       console.log('Database Schema Ready.');
       return; 
       } finally {

@@ -3,29 +3,56 @@ import { useVault } from '../contexts/VaultContext';
 import { X, Save, Eye, EyeOff } from 'lucide-react';
 
 const PasswordModal = ({ onClose, initialData = null }) => {
-  const { addEntry, updateEntry } = useVault();
+  const { addEntry, updateEntry, entries } = useVault();
   const [formData, setFormData] = useState({
     service_name: initialData?.service_name || '',
     account_username: initialData?.account_username || '',
-    password: initialData?.password || ''
+    password: initialData?.password || '',
+    website_url: initialData?.website_url || ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Autocomplete State
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    let success;
+  const handleUrlChange = (e) => {
+    const val = e.target.value;
+    setFormData({...formData, website_url: val});
     
-    if (initialData) {
-      success = await updateEntry(initialData.id, formData);
+    if (val.length > 0) {
+      // Get unique existing URLs matches
+      const uniqueUrls = [...new Set(entries.map(ent => ent.website_url).filter(u => u && u.toLowerCase().includes(val.toLowerCase())))];
+      setSuggestions(uniqueUrls.slice(0, 5)); // Limit to 5
+      setShowSuggestions(true);
     } else {
-      success = await addEntry(formData);
+      setShowSuggestions(false);
     }
-
-    setLoading(false);
-    if (success) onClose();
   };
+
+  const selectSuggestion = (url) => {
+    setFormData({...formData, website_url: url});
+    setShowSuggestions(false);
+  };
+
+  // ... (rest of component handles submit correctly using formData) ...
+  
+  const handleSubmit = async (e) => {
+     // ...
+     e.preventDefault();
+     setLoading(true);
+     let success;
+    
+     if (initialData) {
+       success = await updateEntry(initialData.id, formData);
+     } else {
+       success = await addEntry(formData);
+     }
+ 
+     setLoading(false);
+     if (success) onClose();
+   };
 
   return (
     <div className="modal-overlay">
@@ -45,6 +72,41 @@ const PasswordModal = ({ onClose, initialData = null }) => {
               required
               autoFocus
             />
+          </div>
+           <div className="form-group" style={{ position: 'relative' }}>
+            <label>Website URL (Optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. netflix.com"
+              value={formData.website_url}
+              onChange={handleUrlChange}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              onFocus={() => formData.website_url && handleUrlChange({ target: { value: formData.website_url } })}
+              autoComplete="off"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <ul style={{
+                position: 'absolute', top: '100%', left: 0, right: 0,
+                background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                borderRadius: '0 0 4px 4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto',
+                listStyle: 'none', padding: 0, margin: 0
+              }}>
+                {suggestions.map((url, idx) => (
+                  <li 
+                    key={idx}
+                    onClick={() => selectSuggestion(url)}
+                    style={{
+                      padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)',
+                      fontSize: '0.9rem', color: 'var(--text-secondary)'
+                    }}
+                    onMouseEnter={(e) => { e.target.style.background = 'var(--bg-hover)'; e.target.style.color = 'white'; }}
+                    onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--text-secondary)'; }}
+                  >
+                    {url}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="form-group">
             <label>Username / Email</label>
