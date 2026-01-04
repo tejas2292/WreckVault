@@ -1,29 +1,27 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { VaultProvider } from './contexts/VaultContext';
+import { VaultProvider, useVault } from './contexts/VaultContext';
+import { UIProvider } from './contexts/UIContext';
 import AuthScreens from './components/AuthScreens';
 import VaultDashboard from './components/VaultDashboard';
+import './index.css';
 
-// Wrapper to handle conditional rendering based on auth state
-const AppContent = () => {
-  const { user, masterPassword } = useAuth();
-
-  if (!user || !masterPassword) {
-    return <AuthScreens />;
-  }
-
-  return (
+function AppContent() {
+  const { user } = useAuth();
+  return user ? (
     <VaultProvider>
       <VaultDashboard />
     </VaultProvider>
-  );
-};
+  ) : <AuthScreens />;
+}
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <UIProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </UIProvider>
   );
 }
 

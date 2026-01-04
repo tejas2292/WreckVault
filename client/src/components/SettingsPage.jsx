@@ -1,26 +1,35 @@
 import React, { useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVault } from '../contexts/VaultContext';
+import { useUI } from '../contexts/UIContext';
 import { Download, Upload, Clock, AlertTriangle, Check, Shield } from 'lucide-react';
 
 const SettingsPage = () => {
   const { autoLockDuration, updateAutoLock } = useAuth();
   const { entries, addEntry } = useVault();
+  const { confirm, showToast } = useUI();
   const fileInputRef = useRef(null);
   const [importStatus, setImportStatus] = useState('');
 
   // EXPORT VAULT
-  const handleExport = () => {
-    if (!window.confirm("Warning: This will download an UNENCRYPTED JSON file with all your passwords. Keep it safe!")) return;
+  const handleExport = async () => {
+    const isConfirmed = await confirm({
+      title: 'Export Unencrypted Data?',
+      message: 'This will download an UNENCRYPTED JSON file with all your passwords. Anyone with this file can see your passwords. Are you sure?',
+      type: 'warning'
+    });
     
-    // Prepare data (remove internal IDs, keep pure data)
+    if (!isConfirmed) return;
+    
+    // ... existing export logic ...
     const exportData = entries.map(e => ({
-      service_name: e.service_name,
-      account_username: e.account_username,
-      password: e.password,
-      exported_at: new Date().toISOString()
+       service_name: e.service_name,
+       account_username: e.account_username,
+       password: e.password,
+       website_url: e.website_url, // Added website_url export support
+       exported_at: new Date().toISOString()
     }));
-
+    // ...
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -30,6 +39,7 @@ const SettingsPage = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    showToast("Vault exported successfully", "success");
   };
 
   // IMPORT VAULT
@@ -55,15 +65,16 @@ const SettingsPage = () => {
             await addEntry({
               service_name: item.service_name,
               account_username: item.account_username || '',
-              password: item.password
+              password: item.password,
+              website_url: item.website_url // Added import support
             });
             count++;
           }
         }
-        setImportStatus(`Successfully imported ${count} items!`);
-        setTimeout(() => setImportStatus(''), 3000);
+        showToast(`Successfully imported ${count} items!`, "success");
+        setImportStatus('');
       } catch (err) {
-        alert("Failed to import: " + err.message);
+        showToast("Failed to import: " + err.message, "error");
         setImportStatus('');
       }
     };

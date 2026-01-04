@@ -1,11 +1,13 @@
 import React, { createContext, useState, useContext } from 'react';
 import api from '../api';
+import { useUI } from './UIContext';
 
 const AuthContext = createContext(null);
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
+  const { showToast } = useUI();
   const [user, setUser] = useState(null);
   const [masterPassword, setMasterPassword] = useState(null);
   const [authError, setAuthError] = useState(null);

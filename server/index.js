@@ -113,6 +113,25 @@ app.put('/api/auth/me', async (req, res) => {
   }
 });
 
+// Delete User Account
+app.delete('/api/auth/me', async (req, res) => {
+  const userId = req.headers['x-user-id'];
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    // 1. Delete all vault entries for this user
+    await pool.query('DELETE FROM vault_entries WHERE user_id = $1', [userId]);
+
+    // 2. Delete the user
+    await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+
+    res.json({ message: "Account deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete account" });
+  }
+});
+
 // --- Vault Routes ---
 // Note: In production, these should be protected by middleware verifying session/JWT.
 // For this prototype, we will trust the 'user_id' sent in the headers or body,

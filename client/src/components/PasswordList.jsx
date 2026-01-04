@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useVault } from '../contexts/VaultContext';
-import { Copy, Trash2, Eye, EyeOff, Pen } from 'lucide-react';
+import { useUI } from '../contexts/UIContext';
+import { Eye, EyeOff, Copy, Pen, Trash2 } from 'lucide-react';
 
 const PasswordCard = ({ entry, onEdit }) => {
   const { deleteEntry } = useVault();
-  const [revealed, setRevealed] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
-  const [imgError, setImgError] = React.useState(false);
+  const { confirm, showToast } = useUI();
+  const [revealed, setRevealed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(entry.password);
     setCopied(true);
+    showToast("Password copied to clipboard!", "success");
     setTimeout(() => setCopied(false), 2000);
   };
   
@@ -18,9 +21,16 @@ const PasswordCard = ({ entry, onEdit }) => {
     onEdit(entry);
   };
 
-  const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this password?")) {
+  const handleDelete = async () => {
+    const isConfirmed = await confirm({
+      title: 'Delete Password',
+      message: `Are you sure you want to delete the password for "${entry.service_name}"? This cannot be undone.`,
+      type: 'danger'
+    });
+
+    if (isConfirmed) {
       deleteEntry(entry.id);
+      showToast("Password deleted successfully", "success");
     }
   };
 

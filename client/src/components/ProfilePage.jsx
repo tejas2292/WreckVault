@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVault } from '../contexts/VaultContext';
+import { useUI } from '../contexts/UIContext';
 import { User, Shield, Calendar, Key, AlertTriangle, Camera } from 'lucide-react';
 import api from '../api';
 
 const ProfilePage = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const { entries } = useVault();
+  const { confirm, showToast } = useUI();
   const [isEditingImage, setIsEditingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState(user.profile_image || '');
   
@@ -22,8 +24,27 @@ const ProfilePage = () => {
       });
       updateUser({ profile_image: res.data.user.profile_image });
       setIsEditingImage(false);
+      showToast("Profile image updated", "success");
     } catch (err) {
-      alert("Failed to update image");
+      showToast("Failed to update image", "error");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const isConfirmed = await confirm({
+      title: 'Delete Account?',
+      message: 'This action is IRREVERSIBLE. All your passwords and data will be permanently deleted. Are you absolutely sure?',
+      type: 'danger'
+    });
+
+    if (isConfirmed) {
+      try {
+        await api.delete('/auth/me', { headers: { 'x-user-id': user.id } });
+        logout();
+        showToast("Account deleted successfully", "info");
+      } catch (err) {
+        showToast("Failed to delete account", "error");
+      }
     }
   };
 
@@ -43,6 +64,7 @@ const ProfilePage = () => {
           
           <button 
             onClick={() => setIsEditingImage(!isEditingImage)}
+            title="Change Profile Picture"
             style={{ 
               position: 'absolute', bottom: 0, width: '100%', background: 'rgba(0,0,0,0.5)', 
               border: 'none', color: 'white', cursor: 'pointer', padding: '5px' 
@@ -104,7 +126,7 @@ const ProfilePage = () => {
           Danger Zone
         </h3>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Deleting your account will permanently wipe all your encrypted data.</p>
-        <button className="btn-danger" style={{ 
+        <button className="btn-danger" onClick={handleDeleteAccount} style={{ 
           background: 'rgba(255, 71, 87, 0.1)', color: 'var(--danger)', padding: '10px 20px', borderRadius: 'var(--radius-sm)'
         }}>Delete Account</button>
       </div>
