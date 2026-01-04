@@ -70,7 +70,12 @@ app.post('/api/auth/login', async (req, res) => {
     // We will just send back the user ID to store in client memory state.
     res.json({ 
       message: "Login successful", 
-      user: { id: user.id, username: user.username, created_at: user.created_at } 
+      user: { 
+        id: user.id, 
+        username: user.username, 
+        created_at: user.created_at,
+        profile_image: user.profile_image 
+      } 
     });
   } catch (err) {
     console.error(err);
