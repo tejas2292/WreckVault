@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useVault } from '../contexts/VaultContext';
-import { X, Save } from 'lucide-react';
+import { X, Save, Eye, EyeOff } from 'lucide-react';
 
 const PasswordModal = ({ onClose }) => {
   const { addEntry } = useVault();
@@ -9,6 +9,7 @@ const PasswordModal = ({ onClose }) => {
     account_username: '',
     password: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -49,13 +50,31 @@ const PasswordModal = ({ onClose }) => {
           </div>
           <div className="form-group">
             <label>Password</label>
-            <input
-              type="password"
-              placeholder="Secret Password"
-              value={formData.password}
-              onChange={e => setFormData({...formData, password: e.target.value})}
-              required
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Secret Password"
+                value={formData.password}
+                onChange={e => setFormData({...formData, password: e.target.value})}
+                required
+                style={{ paddingRight: '44px' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  color: 'var(--text-secondary)',
+                  padding: 0
+                }}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           <div className="modal-footer">
             <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
