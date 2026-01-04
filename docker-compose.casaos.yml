@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: password-manager-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: wreckvault
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - wreckcloud_internal
+    restart: unless-stopped
+
+  backend-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.prod
+    container_name: password-manager-api
+    environment:
+      - PORT=5000
+      - DATABASE_URL=postgres://user:password@postgres-db:5432/wreckvault
+      # Generate a random secret in production!
+      - JWT_SECRET=change_me_in_casaos_settings
+    depends_on:
+      - postgres-db
+    networks:
+      - wreckcloud_internal
+    restart: unless-stopped
+
+  frontend-client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.prod
+    container_name: password-manager-client
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend-api
+    networks:
+      - wreckcloud_internal
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+
+networks:
+  wreckcloud_internal:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  main: frontend-client
+  description:
+    en_us: "WreckVault is a secure, self-hosted password manager."
+  tagline:
+    en_us: "Secure your digital life with WreckVault"
+  developer: "WreckVault Team"
+  author: "WreckVault"
+  icon: "https://cdn-icons-png.flaticon.com/512/6195/6195698.png"
+  thumbnail: "https://images.unsplash.com/photo-1614064641938-3bcee529cfc3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1080&q=80"
+  title:
+    en_us: "WreckVault"
+  category: "Security"
+  port_map: "3000"
