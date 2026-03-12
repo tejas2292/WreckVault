@@ -33,9 +33,10 @@ jobs:
       - name: Install server deps
         run: npm ci --prefix server
 
-  # Runs on YOUR runner (e.g. on your LAN). Server never exposed to internet.
+  # Runs on YOUR runner (e.g. on your LAN). Set to 'true' once you add a self-hosted runner.
   deploy:
     name: Deploy to server
+    if: false  # set to true when you have a self-hosted runner
     runs-on: self-hosted
     needs: check
     steps:
