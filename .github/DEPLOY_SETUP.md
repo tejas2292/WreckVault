@@ -4,6 +4,35 @@
 
 This workflow runs on every **push to `main`**: it runs lint + build on GitHub’s runners, and if they pass, the deploy job runs on your self-hosted runner and SSHs into your server to run `git pull` + `docker compose up -d --build`.
 
+---
+
+## 0. Add the self-hosted runner (do this first)
+
+The runner is a small app that runs on **your** machine (e.g. your server) and picks up deploy jobs from GitHub. You add it from GitHub, then install and run it on your machine.
+
+1. **Open the runner setup page**
+   - Repo: **https://github.com/tejas2292/WreckVault**
+   - Go to **Settings** → **Actions** → **Runners** (left sidebar).
+   - Click **“New self-hosted runner”**.
+
+2. **Choose OS**
+   - If the runner will run on your **server** (192.168.31.43), pick **Linux** (and the architecture, usually x64).
+   - GitHub will show a block of commands. You’ll run those on the server.
+
+3. **On the machine where the runner will run** (e.g. SSH into the server: `ssh wrecker@192.168.31.43`):
+   - Run the **Download** and **Configure** commands from GitHub (copy-paste). When it asks for a name, you can use e.g. `wreckvault-server`.
+   - When it says “Configure the runner as a service”, run the **Install** and **Start** commands so the runner keeps running after reboot.
+
+4. **Re-enable the deploy job**
+   - In the repo, edit `.github/workflows/deploy.yml`: change `if: false` to `if: true` for the deploy job (or remove the `if` line), commit and push.
+   - On the next push to `main`, the deploy job will run on your runner.
+
+**Where to run the runner**
+- **On the server (192.168.31.43):** Good option. The runner can SSH to `localhost` to deploy the same machine. Add the GitHub secrets (host can be `127.0.0.1` or `192.168.31.43`, and the SSH key must be set up for `wrecker@...` on that server).
+- **On another PC on your LAN:** Also fine. That PC must be able to SSH to `192.168.31.43` as `wrecker` (use the deploy SSH key).
+
+---
+
 ## 1. Check that the server has the project and Git
 
 SSH in from your machine (you’ll be prompted for the password):
