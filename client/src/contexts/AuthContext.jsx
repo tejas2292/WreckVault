@@ -7,7 +7,7 @@ const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const { showToast } = useUI();
+  useUI();
   const [user, setUser] = useState(null);
   const [masterPassword, setMasterPassword] = useState(null);
   const [authError, setAuthError] = useState(null);
@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
     // ... existing register ...
     setAuthError(null);
     try {
-      const response = await api.post('/auth/register', { username, password });
+      await api.post('/auth/register', { username, password });
       // Auto login after register
       await login(username, password);
       return true;

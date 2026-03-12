@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import { createContext, useContext, useCallback } from 'react';
 import Swal from 'sweetalert2';
 
 const UIContext = createContext();

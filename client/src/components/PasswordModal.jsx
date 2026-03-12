@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useVault } from '../contexts/VaultContext';
 import { X, Save, Eye, EyeOff } from 'lucide-react';
 

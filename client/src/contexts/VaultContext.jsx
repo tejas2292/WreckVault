@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import api from '../api';
 import { useAuth } from './AuthContext';
 import { encrypt, decrypt } from '../utils/encryption';
@@ -13,16 +13,7 @@ export const VaultProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch and Decrypt Entries
-  useEffect(() => {
-    if (user && masterPassword) {
-      fetchEntries();
-    } else {
-      setEntries([]);
-    }
-  }, [user, masterPassword]);
-
-  const fetchEntries = async () => {
+  const fetchEntries = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
@@ -46,7 +37,15 @@ export const VaultProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, masterPassword]);
+
+  useEffect(() => {
+    if (user && masterPassword) {
+      fetchEntries();
+    } else {
+      setEntries([]);
+    }
+  }, [user, masterPassword, fetchEntries]);
 
   const addEntry = async (entryData) => {
     // encrypt password

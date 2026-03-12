@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const AuthScreens = () => {
   const { login, register, authError } = useAuth();

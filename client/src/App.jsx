@@ -1,6 +1,5 @@
-import React from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { VaultProvider, useVault } from './contexts/VaultContext';
+import { VaultProvider } from './contexts/VaultContext';
 import { UIProvider } from './contexts/UIContext';
 import AuthScreens from './components/AuthScreens';
 import VaultDashboard from './components/VaultDashboard';

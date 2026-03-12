@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVault } from '../contexts/VaultContext';
 import PasswordList from './PasswordList';
 import PasswordModal from './PasswordModal';
 import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
-import { LogOut, Plus, Search, ShieldCheck, User as UserIcon, LayoutGrid, Settings } from 'lucide-react';
+import { LogOut, Plus, Search, User as UserIcon, LayoutGrid, Settings } from 'lucide-react';
 
 const VaultDashboard = () => {
   const { logout, user } = useAuth();
-  const { refresh } = useVault();
+  useVault(); // ensures vault context is active
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingEntry, setEditingEntry] = useState(null);

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVault } from '../contexts/VaultContext';
 import { useUI } from '../contexts/UIContext';
-import { User, Shield, Calendar, Key, AlertTriangle, Camera } from 'lucide-react';
+import { Shield, Calendar, Key, AlertTriangle, Camera } from 'lucide-react';
 import api from '../api';
 
 const ProfilePage = () => {

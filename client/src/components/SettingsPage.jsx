@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVault } from '../contexts/VaultContext';
 import { useUI } from '../contexts/UIContext';
-import { Download, Upload, Clock, AlertTriangle, Check, Shield } from 'lucide-react';
+import { Download, Upload, Clock, Shield } from 'lucide-react';
 
 const SettingsPage = () => {
   const { autoLockDuration, updateAutoLock } = useAuth();
