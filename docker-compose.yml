@@ -6,6 +6,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: password-manager-api
+    restart: always
     ports:
       - "3012:5000"
     environment:
@@ -24,6 +25,7 @@ services:
       context: ./client
       dockerfile: Dockerfile
     container_name: password-manager-client
+    restart: always
     ports:
       - "3011:3000" # Vite default
     volumes:

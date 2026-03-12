@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useVault } from '../contexts/VaultContext';
 import { useUI } from '../contexts/UIContext';
 import { Eye, EyeOff, Copy, Pen, Trash2 } from 'lucide-react';
+import { copyToClipboard } from '../utils/clipboard';
 
 const PasswordCard = ({ entry, onEdit }) => {
   const { deleteEntry } = useVault();
@@ -10,11 +11,15 @@ const PasswordCard = ({ entry, onEdit }) => {
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(entry.password);
-    setCopied(true);
-    showToast("Password copied to clipboard!", "success");
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    const success = await copyToClipboard(entry.password);
+    if (success) {
+      setCopied(true);
+      showToast("Password copied to clipboard!", "success");
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      showToast("Failed to copy. Try manual copy.", "error");
+    }
   };
   
   const handleEdit = () => {
