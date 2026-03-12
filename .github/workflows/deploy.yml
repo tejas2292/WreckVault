@@ -15,8 +15,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: |
             client/package-lock.json
             server/package-lock.json
@@ -33,25 +33,19 @@ jobs:
       - name: Install server deps
         run: npm ci --prefix server
 
-  # Runs on YOUR runner (e.g. on your LAN).
   deploy:
     name: Deploy to server
-    if: true
     runs-on: self-hosted
     needs: check
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT || 22 }}
-          script: |
-            set -e
-            cd ${{ secrets.DEPLOY_PROJECT_PATH }}
-            git fetch origin
-            git reset --hard origin/main
-            git status
-            docker compose pull --quiet 2>/dev/null || true
-            docker compose up -d --build
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy
+        run: |
+          set -e
+          cd ~/WreckVault
+          git fetch origin
+          git reset --hard origin/main
+          docker compose pull --quiet 2>/dev/null || true
+          docker compose up -d --build

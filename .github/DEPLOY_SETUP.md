@@ -110,3 +110,44 @@ Do **not** put your SSH password in a secret; the workflow uses the key only.
 - Check runs in the **Actions** tab of the repo.
 
 **Deploy job:** The workflow is set to `runs-on: self-hosted` for the deploy job, so it only runs when you have added a [self-hosted runner](https://docs.github.com/en/actions/guides/adding-self-hosted-runners) (e.g. on the server or another PC on your LAN). Until you add one, the deploy job will wait for a runner; lint and build still run on GitHub. If you prefer not to use a runner, you can remove the `deploy` job from the workflow and run `git pull` and `docker compose up -d --build` on the server yourself when you want to update.
+
+---
+
+## Troubleshooting: "Waiting for a runner"
+
+If the deploy job stays on **Waiting for a runner to pick up this job**:
+
+1. **On GitHub:** Repo → **Settings** → **Actions** → **Runners**. Check your runner:
+   - **Idle** (green) = runner is connected and can take jobs. If it’s Idle but the job still waits, try re-running the workflow.
+   - **Offline** (grey) = runner is not connected. Go to step 2.
+
+2. **On the server (SSH in):** The runner must be **running**. If you only ran `./run.sh` and closed the terminal, it stopped.
+   - Check: `cd ~/actions-runner && sudo ./svc.sh status` (if installed as a service).
+   - If not installed as a service: `cd ~/actions-runner && ./run.sh` (keep the terminal open), or install and start the service:
+     ```bash
+     cd ~/actions-runner
+     sudo ./svc.sh install
+     sudo ./svc.sh start
+     sudo ./svc.sh status
+     ```
+   - After starting, wait a few seconds and refresh the **Runners** page on GitHub; the runner should show **Idle**.
+
+3. **Labels:** The job uses `runs-on: self-hosted`. The default runner has the label `self-hosted`, so it should match. If you added custom labels when configuring, ensure the job’s `runs-on` matches (e.g. `runs-on: [self-hosted, Linux]`).
+
+---
+
+## Runner starts on server reboot
+
+After `sudo ./svc.sh install` and `sudo ./svc.sh start`, the runner is a **systemd service** and should start on boot. To make sure it is enabled:
+
+```bash
+cd ~/actions-runner
+# Find the exact service name (e.g. actions.runner.tejas2292-WreckVault.wrecker.service)
+ls /etc/systemd/system/ | grep actions.runner
+# Enable start on boot (use the name from above)
+sudo systemctl enable actions.runner.tejas2292-WreckVault.wrecker.service
+# Optional: confirm it’s enabled
+systemctl is-enabled actions.runner.tejas2292-WreckVault.wrecker.service
+```
+
+Replace `actions.runner.tejas2292-WreckVault.wrecker.service` with the name you see from the `ls` command (repo and runner name may vary). After this, the runner will start automatically when the server reboots.
