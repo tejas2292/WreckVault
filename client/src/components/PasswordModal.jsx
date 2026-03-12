@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useVault } from '../contexts/VaultContext';
-import { X, Save, Eye, EyeOff } from 'lucide-react';
+import { X, Save, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import CATEGORIES, { getCategoryByKey } from '../constants/categories';
 
 const PasswordModal = ({ onClose, initialData = null }) => {
   const { addEntry, updateEntry, entries } = useVault();
@@ -8,8 +9,10 @@ const PasswordModal = ({ onClose, initialData = null }) => {
     service_name: initialData?.service_name || '',
     account_username: initialData?.account_username || '',
     password: initialData?.password || '',
-    website_url: initialData?.website_url || ''
+    website_url: initialData?.website_url || '',
+    category: initialData?.category || 'other'
   });
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -72,6 +75,46 @@ const PasswordModal = ({ onClose, initialData = null }) => {
               required
               autoFocus
             />
+          </div>
+          <div className="form-group" style={{ position: 'relative' }}>
+            <label>Category</label>
+            <button
+              type="button"
+              className="category-select-btn"
+              onClick={() => setCategoryOpen(!categoryOpen)}
+            >
+              {(() => {
+                const cat = getCategoryByKey(formData.category);
+                const Icon = cat.icon;
+                return (
+                  <>
+                    <span className="category-select-preview" style={{ color: cat.color }}>
+                      <Icon size={16} />
+                      {cat.label}
+                    </span>
+                    <ChevronDown size={16} style={{ transform: categoryOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                  </>
+                );
+              })()}
+            </button>
+            {categoryOpen && (
+              <div className="category-dropdown">
+                {CATEGORIES.map((cat) => {
+                  const Icon = cat.icon;
+                  const isActive = formData.category === cat.key;
+                  return (
+                    <div
+                      key={cat.key}
+                      className={`category-dropdown-item ${isActive ? 'active' : ''}`}
+                      onClick={() => { setFormData({...formData, category: cat.key}); setCategoryOpen(false); }}
+                    >
+                      <Icon size={16} style={{ color: cat.color }} />
+                      <span>{cat.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
            <div className="form-group" style={{ position: 'relative' }}>
             <label>Website URL (Optional)</label>

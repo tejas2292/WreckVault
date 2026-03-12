@@ -168,12 +168,12 @@ app.get('/api/vault', requireAuth, async (req, res) => {
 
 // POST (Add) password to vault
 app.post('/api/vault', requireAuth, async (req, res) => {
-  const { service_name, account_username, encrypted_blob, iv, website_url } = req.body;
+  const { service_name, account_username, encrypted_blob, iv, website_url, category } = req.body;
 
   try {
     const result = await pool.query(
-      'INSERT INTO vault_entries (user_id, service_name, account_username, encrypted_blob, iv, website_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [req.userId, service_name, account_username, encrypted_blob, iv, website_url]
+      'INSERT INTO vault_entries (user_id, service_name, account_username, encrypted_blob, iv, website_url, category) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [req.userId, service_name, account_username, encrypted_blob, iv, website_url, category || 'other']
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -185,15 +185,15 @@ app.post('/api/vault', requireAuth, async (req, res) => {
 // PUT (Update) password
 app.put('/api/vault/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { service_name, account_username, encrypted_blob, iv, website_url } = req.body;
+  const { service_name, account_username, encrypted_blob, iv, website_url, category } = req.body;
 
   try {
     const result = await pool.query(
       `UPDATE vault_entries 
-       SET service_name = $1, account_username = $2, encrypted_blob = $3, iv = $4, website_url = $5, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6 AND user_id = $7
+       SET service_name = $1, account_username = $2, encrypted_blob = $3, iv = $4, website_url = $5, category = $6, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7 AND user_id = $8
        RETURNING *`,
-      [service_name, account_username, encrypted_blob, iv, website_url, id, req.userId]
+      [service_name, account_username, encrypted_blob, iv, website_url, category || 'other', id, req.userId]
     );
 
     if (result.rows.length === 0) {

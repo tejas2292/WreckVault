@@ -619,6 +619,145 @@ input:focus {
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
+/* --- Category Filter Bar --- */
+.category-filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 2.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border-glass);
+  background: rgba(5, 5, 7, 0.5);
+  backdrop-filter: blur(8px);
+  flex-wrap: wrap;
+}
+
+.category-filter-bar::-webkit-scrollbar { display: none; }
+
+.category-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-pill:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border-color: var(--border-glass-hover);
+}
+
+.category-pill.active {
+  background: rgba(108, 92, 231, 0.12);
+  border-color: var(--accent-primary);
+  color: var(--accent-secondary);
+}
+
+.pill-count {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+.category-pill.active .pill-count {
+  background: rgba(108, 92, 231, 0.2);
+}
+
+/* --- Category Badge on Cards --- */
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid;
+  width: fit-content;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* --- Category Selector in Modal --- */
+.category-select-btn {
+  width: 100%;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-select-btn:hover {
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.category-select-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.category-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1a1a24;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  z-index: 20;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  animation: zoomIn 0.15s ease;
+}
+
+.category-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.category-dropdown-item:last-child { border-bottom: none; }
+
+.category-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.category-dropdown-item.active {
+  background: rgba(108, 92, 231, 0.1);
+  color: var(--accent-secondary);
+}
+
 /* SweetAlert Customization Override */
 div:where(.swal2-container) div:where(.swal2-popup) {
   background: #1a1a24 !important;

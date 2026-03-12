@@ -5,17 +5,24 @@ import PasswordList from './PasswordList';
 import PasswordModal from './PasswordModal';
 import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
-import { LogOut, Plus, Search, User as UserIcon, LayoutGrid, Settings } from 'lucide-react';
+import { LogOut, Plus, Search, User as UserIcon, LayoutGrid, Settings, Layers } from 'lucide-react';
+import CATEGORIES from '../constants/categories';
 
 const VaultDashboard = () => {
   const { logout, user } = useAuth();
-  useVault(); // ensures vault context is active
+  const { entries } = useVault();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingEntry, setEditingEntry] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   
-  // Simple Router
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'profile' | 'settings'
+  const [currentView, setCurrentView] = useState('dashboard');
+
+  const categoryCounts = entries.reduce((acc, entry) => {
+    const cat = entry.category || 'other';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {});
 
   const handleEditEntry = (entry) => {
     setEditingEntry(entry);
@@ -99,8 +106,36 @@ const VaultDashboard = () => {
               </button>
             </header>
 
+            <div className="category-filter-bar">
+              <button
+                className={`category-pill ${selectedCategory === 'all' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory('all')}
+              >
+                <Layers size={14} />
+                All
+                <span className="pill-count">{entries.length}</span>
+              </button>
+              {CATEGORIES.map((cat) => {
+                const count = categoryCounts[cat.key] || 0;
+                if (count === 0) return null;
+                const Icon = cat.icon;
+                return (
+                  <button
+                    key={cat.key}
+                    className={`category-pill ${selectedCategory === cat.key ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(cat.key)}
+                    style={selectedCategory === cat.key ? { borderColor: cat.color, background: `${cat.color}15`, color: cat.color } : {}}
+                  >
+                    <Icon size={14} style={{ color: selectedCategory === cat.key ? cat.color : undefined }} />
+                    {cat.label}
+                    <span className="pill-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="content-area">
-              <PasswordList searchQuery={searchQuery} onEditEntry={handleEditEntry} />
+              <PasswordList searchQuery={searchQuery} onEditEntry={handleEditEntry} selectedCategory={selectedCategory} />
             </div>
           </>
         ) : currentView === 'profile' ? (

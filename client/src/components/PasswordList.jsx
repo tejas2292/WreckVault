@@ -3,6 +3,7 @@ import { useVault } from '../contexts/VaultContext';
 import { useUI } from '../contexts/UIContext';
 import { Eye, EyeOff, Copy, Pen, Trash2 } from 'lucide-react';
 import { copyToClipboard } from '../utils/clipboard';
+import { getCategoryByKey } from '../constants/categories';
 
 const PasswordCard = ({ entry, onEdit }) => {
   const { deleteEntry } = useVault();
@@ -63,8 +64,15 @@ const PasswordCard = ({ entry, onEdit }) => {
 
   const logoUrl = getLogoUrl(entry.service_name);
 
+  const category = getCategoryByKey(entry.category);
+  const CategoryIcon = category.icon;
+
   return (
     <div className="password-card">
+      <div className="category-badge" style={{ background: `${category.color}18`, color: category.color, borderColor: `${category.color}30` }}>
+        <CategoryIcon size={12} />
+        {category.label}
+      </div>
       <div className="card-header">
         <div className="service-icon" style={{ overflow: 'hidden', background: imgError ? 'var(--accent-primary)' : 'transparent' }}>
           {!imgError ? (
@@ -114,16 +122,19 @@ const PasswordCard = ({ entry, onEdit }) => {
   );
 };
 
-const PasswordList = ({ searchQuery, onEditEntry }) => {
+const PasswordList = ({ searchQuery, onEditEntry, selectedCategory }) => {
   const { entries, isLoading, error } = useVault();
 
   if (isLoading && entries.length === 0) return <div className="loading">Loading vault...</div>;
   if (error) return <div className="error">{error}</div>;
 
-  const filteredEntries = entries.filter(entry => 
-    entry.service_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    entry.account_username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredEntries = entries.filter(entry => {
+    const matchesSearch =
+      entry.service_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.account_username.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || selectedCategory === 'all' || entry.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   if (filteredEntries.length === 0) {
     return (
