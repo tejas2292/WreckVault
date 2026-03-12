@@ -44,7 +44,7 @@ export const VaultProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, masterPassword, decryptEntry]);
+  }, [user, decryptEntry]);
 
   useEffect(() => {
     if (user && masterPassword) {
