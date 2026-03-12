@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useVault } from '../contexts/VaultContext';
-import { X, Save, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import { X, Save, Eye, EyeOff, ChevronDown, RefreshCw, Sliders } from 'lucide-react';
 import CATEGORIES, { getCategoryByKey } from '../constants/categories';
+import PasswordStrength from './PasswordStrength';
+import { generatePassword } from '../utils/passwordGenerator';
 
 const PasswordModal = ({ onClose, initialData = null }) => {
   const { addEntry, updateEntry, entries } = useVault();
@@ -15,19 +17,20 @@ const PasswordModal = ({ onClose, initialData = null }) => {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  // Autocomplete State
+  const [showGenerator, setShowGenerator] = useState(false);
+  const [genOptions, setGenOptions] = useState({
+    length: 16, uppercase: true, lowercase: true, numbers: true, symbols: true
+  });
+
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const handleUrlChange = (e) => {
     const val = e.target.value;
     setFormData({...formData, website_url: val});
-    
     if (val.length > 0) {
-      // Get unique existing URLs matches
       const uniqueUrls = [...new Set(entries.map(ent => ent.website_url).filter(u => u && u.toLowerCase().includes(val.toLowerCase())))];
-      setSuggestions(uniqueUrls.slice(0, 5)); // Limit to 5
+      setSuggestions(uniqueUrls.slice(0, 5));
       setShowSuggestions(true);
     } else {
       setShowSuggestions(false);
@@ -39,30 +42,31 @@ const PasswordModal = ({ onClose, initialData = null }) => {
     setShowSuggestions(false);
   };
 
-  // ... (rest of component handles submit correctly using formData) ...
-  
+  const handleGenerate = () => {
+    const pwd = generatePassword(genOptions);
+    setFormData({...formData, password: pwd});
+    setShowPassword(true);
+  };
+
   const handleSubmit = async (e) => {
-     // ...
-     e.preventDefault();
-     setLoading(true);
-     let success;
-    
-     if (initialData) {
-       success = await updateEntry(initialData.id, formData);
-     } else {
-       success = await addEntry(formData);
-     }
- 
-     setLoading(false);
-     if (success) onClose();
-   };
+    e.preventDefault();
+    setLoading(true);
+    let success;
+    if (initialData) {
+      success = await updateEntry(initialData.id, { ...formData, entry_type: 'password' });
+    } else {
+      success = await addEntry({ ...formData, entry_type: 'password' });
+    }
+    setLoading(false);
+    if (success) onClose();
+  };
 
   return (
     <div className="modal-overlay">
       <div className="modal-card">
         <div className="modal-header">
           <h3>{initialData ? 'Edit Password' : 'Add New Password'}</h3>
-          <button onClick={onClose} className="close-btn"><X size={24} /></button>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -78,11 +82,7 @@ const PasswordModal = ({ onClose, initialData = null }) => {
           </div>
           <div className="form-group" style={{ position: 'relative' }}>
             <label>Category</label>
-            <button
-              type="button"
-              className="category-select-btn"
-              onClick={() => setCategoryOpen(!categoryOpen)}
-            >
+            <button type="button" className="category-select-btn" onClick={() => setCategoryOpen(!categoryOpen)}>
               {(() => {
                 const cat = getCategoryByKey(formData.category);
                 const Icon = cat.icon;
@@ -103,11 +103,8 @@ const PasswordModal = ({ onClose, initialData = null }) => {
                   const Icon = cat.icon;
                   const isActive = formData.category === cat.key;
                   return (
-                    <div
-                      key={cat.key}
-                      className={`category-dropdown-item ${isActive ? 'active' : ''}`}
-                      onClick={() => { setFormData({...formData, category: cat.key}); setCategoryOpen(false); }}
-                    >
+                    <div key={cat.key} className={`category-dropdown-item ${isActive ? 'active' : ''}`}
+                      onClick={() => { setFormData({...formData, category: cat.key}); setCategoryOpen(false); }}>
                       <Icon size={16} style={{ color: cat.color }} />
                       <span>{cat.label}</span>
                     </div>
@@ -116,7 +113,7 @@ const PasswordModal = ({ onClose, initialData = null }) => {
               </div>
             )}
           </div>
-           <div className="form-group" style={{ position: 'relative' }}>
+          <div className="form-group" style={{ position: 'relative' }}>
             <label>Website URL (Optional)</label>
             <input
               type="text"
@@ -128,25 +125,9 @@ const PasswordModal = ({ onClose, initialData = null }) => {
               autoComplete="off"
             />
             {showSuggestions && suggestions.length > 0 && (
-              <ul style={{
-                position: 'absolute', top: '100%', left: 0, right: 0,
-                background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                borderRadius: '0 0 4px 4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto',
-                listStyle: 'none', padding: 0, margin: 0
-              }}>
+              <ul className="autocomplete-dropdown">
                 {suggestions.map((url, idx) => (
-                  <li 
-                    key={idx}
-                    onClick={() => selectSuggestion(url)}
-                    style={{
-                      padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)',
-                      fontSize: '0.9rem', color: 'var(--text-secondary)'
-                    }}
-                    onMouseEnter={(e) => { e.target.style.background = 'var(--bg-hover)'; e.target.style.color = 'white'; }}
-                    onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--text-secondary)'; }}
-                  >
-                    {url}
-                  </li>
+                  <li key={idx} onClick={() => selectSuggestion(url)}>{url}</li>
                 ))}
               </ul>
             )}
@@ -161,7 +142,41 @@ const PasswordModal = ({ onClose, initialData = null }) => {
             />
           </div>
           <div className="form-group">
-            <label>Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <label style={{ marginBottom: 0 }}>Password</label>
+              <button type="button" className="gen-toggle-btn" onClick={() => setShowGenerator(!showGenerator)}>
+                <Sliders size={14} />
+                Generator
+              </button>
+            </div>
+            {showGenerator && (
+              <div className="generator-panel">
+                <div className="gen-length-row">
+                  <span>Length: {genOptions.length}</span>
+                  <input type="range" min="8" max="64" value={genOptions.length}
+                    onChange={e => setGenOptions({...genOptions, length: parseInt(e.target.value)})}
+                    className="gen-slider" />
+                </div>
+                <div className="gen-options-row">
+                  {[
+                    { key: 'uppercase', label: 'ABC' },
+                    { key: 'lowercase', label: 'abc' },
+                    { key: 'numbers', label: '123' },
+                    { key: 'symbols', label: '#$%' },
+                  ].map(opt => (
+                    <button key={opt.key} type="button"
+                      className={`gen-option-btn ${genOptions[opt.key] ? 'active' : ''}`}
+                      onClick={() => setGenOptions({...genOptions, [opt.key]: !genOptions[opt.key]})}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="btn-primary gen-btn" onClick={handleGenerate}>
+                  <RefreshCw size={14} />
+                  Generate Password
+                </button>
+              </div>
+            )}
             <div style={{ position: 'relative' }}>
               <input
                 type={showPassword ? "text" : "password"}
@@ -171,27 +186,17 @@ const PasswordModal = ({ onClose, initialData = null }) => {
                 required
                 style={{ paddingRight: '44px' }}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  color: 'var(--text-secondary)',
-                  padding: 0
-                }}
-              >
+              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', color: 'var(--text-secondary)', padding: 0 }}>
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            <PasswordStrength password={formData.password} />
           </div>
           <div className="modal-footer">
             <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
             <button type="submit" className="btn-primary" disabled={loading}>
-              <Save size={18} />
+              <Save size={16} />
               Save Password
             </button>
           </div>

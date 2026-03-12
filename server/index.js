@@ -166,14 +166,14 @@ app.get('/api/vault', requireAuth, async (req, res) => {
   }
 });
 
-// POST (Add) password to vault
+// POST (Add) entry to vault
 app.post('/api/vault', requireAuth, async (req, res) => {
-  const { service_name, account_username, encrypted_blob, iv, website_url, category } = req.body;
+  const { service_name, account_username, encrypted_blob, iv, website_url, category, entry_type } = req.body;
 
   try {
     const result = await pool.query(
-      'INSERT INTO vault_entries (user_id, service_name, account_username, encrypted_blob, iv, website_url, category) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [req.userId, service_name, account_username, encrypted_blob, iv, website_url, category || 'other']
+      'INSERT INTO vault_entries (user_id, service_name, account_username, encrypted_blob, iv, website_url, category, entry_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [req.userId, service_name, account_username, encrypted_blob, iv, website_url, category || 'other', entry_type || 'password']
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -182,18 +182,18 @@ app.post('/api/vault', requireAuth, async (req, res) => {
   }
 });
 
-// PUT (Update) password
+// PUT (Update) entry
 app.put('/api/vault/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { service_name, account_username, encrypted_blob, iv, website_url, category } = req.body;
+  const { service_name, account_username, encrypted_blob, iv, website_url, category, entry_type } = req.body;
 
   try {
     const result = await pool.query(
       `UPDATE vault_entries 
-       SET service_name = $1, account_username = $2, encrypted_blob = $3, iv = $4, website_url = $5, category = $6, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7 AND user_id = $8
+       SET service_name = $1, account_username = $2, encrypted_blob = $3, iv = $4, website_url = $5, category = $6, entry_type = $7, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $8 AND user_id = $9
        RETURNING *`,
-      [service_name, account_username, encrypted_blob, iv, website_url, category || 'other', id, req.userId]
+      [service_name, account_username, encrypted_blob, iv, website_url, category || 'other', entry_type || 'password', id, req.userId]
     );
 
     if (result.rows.length === 0) {
@@ -207,7 +207,26 @@ app.put('/api/vault/:id', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE password
+// PATCH (Toggle favorite)
+app.patch('/api/vault/:id/favorite', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `UPDATE vault_entries SET is_favorite = NOT is_favorite, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND user_id = $2 RETURNING *`,
+      [id, req.userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Entry not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to toggle favorite" });
+  }
+});
+
+// DELETE entry
 app.delete('/api/vault/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   try {

@@ -13,23 +13,30 @@ export const VaultProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const decryptEntry = useCallback((entry) => {
+    const decrypted = decrypt(entry.encrypted_blob, masterPassword);
+    const entryType = entry.entry_type || 'password';
+
+    if (entryType === 'card' || entryType === 'note') {
+      try {
+        const parsed = JSON.parse(decrypted);
+        return { ...entry, decrypted_data: parsed, password: decrypted };
+      } catch {
+        return { ...entry, decrypted_data: null, password: '*** DECRYPTION ERROR ***' };
+      }
+    }
+
+    return { ...entry, password: decrypted || '*** DECRYPTION ERROR ***' };
+  }, [masterPassword]);
+
   const fetchEntries = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
-      // Pass User ID in header for simple auth check
-      const response = await api.get('/vault', { 
-         headers: { 'x-user-id': user.id } 
+      const response = await api.get('/vault', {
+        headers: { 'x-user-id': user.id }
       });
-      
-      const decryptedEntries = response.data.map(entry => {
-        const decryptedPassword = decrypt(entry.encrypted_blob, masterPassword);
-        return {
-          ...entry,
-          password: decryptedPassword || '*** DECRYPTION ERROR ***'
-        };
-      });
-
+      const decryptedEntries = response.data.map(decryptEntry);
       setEntries(decryptedEntries);
     } catch (err) {
       console.error(err);
@@ -37,7 +44,7 @@ export const VaultProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, masterPassword]);
+  }, [user, masterPassword, decryptEntry]);
 
   useEffect(() => {
     if (user && masterPassword) {
@@ -48,28 +55,35 @@ export const VaultProvider = ({ children }) => {
   }, [user, masterPassword, fetchEntries]);
 
   const addEntry = async (entryData) => {
-    // encrypt password
-    const cipher = encrypt(entryData.password, masterPassword);
-    
+    const entryType = entryData.entry_type || 'password';
+    let dataToEncrypt;
+
+    if (entryType === 'card') {
+      dataToEncrypt = JSON.stringify(entryData.card_data);
+    } else if (entryType === 'note') {
+      dataToEncrypt = JSON.stringify(entryData.note_data);
+    } else {
+      dataToEncrypt = entryData.password;
+    }
+
+    const cipher = encrypt(dataToEncrypt, masterPassword);
+
     try {
       const response = await api.post('/vault', {
         service_name: entryData.service_name,
-        account_username: entryData.account_username,
+        account_username: entryData.account_username || '',
         encrypted_blob: cipher,
         iv: 'embedded-in-blob',
-        website_url: entryData.website_url,
-        category: entryData.category || 'other'
-      }, { 
-         headers: { 'x-user-id': user.id } 
+        website_url: entryData.website_url || '',
+        category: entryData.category || 'other',
+        entry_type: entryType
+      }, {
+        headers: { 'x-user-id': user.id }
       });
 
       const newServerEntry = response.data;
-      // Add to local state
-      const newLocalEntry = {
-        ...newServerEntry,
-        password: entryData.password
-      };
-      
+      const newLocalEntry = decryptEntry(newServerEntry);
+
       setEntries([newLocalEntry, ...entries]);
       return true;
     } catch (err) {
@@ -80,27 +94,35 @@ export const VaultProvider = ({ children }) => {
   };
 
   const updateEntry = async (id, entryData) => {
-    // encrypt password
-    const cipher = encrypt(entryData.password, masterPassword);
-    
+    const entryType = entryData.entry_type || 'password';
+    let dataToEncrypt;
+
+    if (entryType === 'card') {
+      dataToEncrypt = JSON.stringify(entryData.card_data);
+    } else if (entryType === 'note') {
+      dataToEncrypt = JSON.stringify(entryData.note_data);
+    } else {
+      dataToEncrypt = entryData.password;
+    }
+
+    const cipher = encrypt(dataToEncrypt, masterPassword);
+
     try {
       const response = await api.put(`/vault/${id}`, {
         service_name: entryData.service_name,
-        account_username: entryData.account_username,
+        account_username: entryData.account_username || '',
         encrypted_blob: cipher,
         iv: 'embedded-in-blob',
-        website_url: entryData.website_url,
-        category: entryData.category || 'other'
-      }, { 
-         headers: { 'x-user-id': user.id } 
+        website_url: entryData.website_url || '',
+        category: entryData.category || 'other',
+        entry_type: entryType
+      }, {
+        headers: { 'x-user-id': user.id }
       });
 
       const updatedServerEntry = response.data;
-      const updatedLocalEntry = {
-        ...updatedServerEntry,
-        password: entryData.password
-      };
-      
+      const updatedLocalEntry = decryptEntry(updatedServerEntry);
+
       setEntries(entries.map(e => e.id === id ? updatedLocalEntry : e));
       return true;
     } catch (err) {
@@ -112,8 +134,8 @@ export const VaultProvider = ({ children }) => {
 
   const deleteEntry = async (id) => {
     try {
-      await api.delete(`/vault/${id}`, { 
-         headers: { 'x-user-id': user.id } 
+      await api.delete(`/vault/${id}`, {
+        headers: { 'x-user-id': user.id }
       });
       setEntries(entries.filter(e => e.id !== id));
       return true;
@@ -124,8 +146,26 @@ export const VaultProvider = ({ children }) => {
     }
   };
 
+  const toggleFavorite = async (id) => {
+    try {
+      const response = await api.patch(`/vault/${id}/favorite`, {}, {
+        headers: { 'x-user-id': user.id }
+      });
+      const updated = response.data;
+      setEntries(entries.map(e => e.id === id ? { ...e, is_favorite: updated.is_favorite } : e));
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
   return (
-    <VaultContext.Provider value={{ entries, isLoading, error, addEntry, updateEntry, deleteEntry, refresh: fetchEntries }}>
+    <VaultContext.Provider value={{
+      entries, isLoading, error,
+      addEntry, updateEntry, deleteEntry, toggleFavorite,
+      refresh: fetchEntries
+    }}>
       {children}
     </VaultContext.Provider>
   );

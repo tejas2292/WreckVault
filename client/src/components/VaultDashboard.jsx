@@ -3,22 +3,38 @@ import { useAuth } from '../contexts/AuthContext';
 import { useVault } from '../contexts/VaultContext';
 import PasswordList from './PasswordList';
 import PasswordModal from './PasswordModal';
+import CardList from './CardList';
+import CardModal from './CardModal';
+import NoteList from './NoteList';
+import NoteModal from './NoteModal';
 import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
-import { LogOut, Plus, Search, User as UserIcon, LayoutGrid, Settings, Layers } from 'lucide-react';
+import {
+  LogOut, Plus, Search, User as UserIcon, LayoutGrid, Settings,
+  Layers, Key, CreditCard, FileText, Star, ChevronDown
+} from 'lucide-react';
 import CATEGORIES from '../constants/categories';
 
 const VaultDashboard = () => {
   const { logout, user } = useAuth();
   const { entries } = useVault();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState('password');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingEntry, setEditingEntry] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  
+  const [activeTab, setActiveTab] = useState('passwords');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+
   const [currentView, setCurrentView] = useState('dashboard');
 
-  const categoryCounts = entries.reduce((acc, entry) => {
+  const passwordEntries = entries.filter(e => !e.entry_type || e.entry_type === 'password');
+  const cardEntries = entries.filter(e => e.entry_type === 'card');
+  const noteEntries = entries.filter(e => e.entry_type === 'note');
+  const favCount = entries.filter(e => e.is_favorite).length;
+
+  const categoryCounts = passwordEntries.reduce((acc, entry) => {
     const cat = entry.category || 'other';
     acc[cat] = (acc[cat] || 0) + 1;
     return acc;
@@ -26,6 +42,7 @@ const VaultDashboard = () => {
 
   const handleEditEntry = (entry) => {
     setEditingEntry(entry);
+    setModalType(entry.entry_type || 'password');
     setIsModalOpen(true);
   };
 
@@ -34,38 +51,46 @@ const VaultDashboard = () => {
     setEditingEntry(null);
   };
 
+  const handleAdd = (type) => {
+    setEditingEntry(null);
+    setModalType(type);
+    setIsModalOpen(true);
+    setAddMenuOpen(false);
+  };
+
+  const renderModal = () => {
+    if (!isModalOpen) return null;
+    if (modalType === 'card') return <CardModal onClose={handleCloseModal} initialData={editingEntry} />;
+    if (modalType === 'note') return <NoteModal onClose={handleCloseModal} initialData={editingEntry} />;
+    return <PasswordModal onClose={handleCloseModal} initialData={editingEntry} />;
+  };
+
   return (
     <div className="dashboard-layout">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <img src="/logo.png" alt="Logo" style={{ width: '40px', height: '40px' }} />
+          <img src="/logo.png" alt="Logo" style={{ width: '36px', height: '36px' }} />
           <h2>WreckVault</h2>
         </div>
         <nav className="sidebar-nav">
-          <div 
-            className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setCurrentView('dashboard')}
-          >
+          <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setCurrentView('dashboard')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <LayoutGrid size={18} />
+              <LayoutGrid size={16} />
               <span>Vault</span>
             </div>
           </div>
-          <div 
-            className={`nav-item ${currentView === 'profile' ? 'active' : ''}`}
-            onClick={() => setCurrentView('profile')}
-          >
+          <div className={`nav-item ${currentView === 'profile' ? 'active' : ''}`}
+            onClick={() => setCurrentView('profile')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <UserIcon size={18} />
+              <UserIcon size={16} />
               <span>Profile</span>
             </div>
           </div>
-          <div 
-            className={`nav-item ${currentView === 'settings' ? 'active' : ''}`}
-            onClick={() => setCurrentView('settings')}
-          >
+          <div className={`nav-item ${currentView === 'settings' ? 'active' : ''}`}
+            onClick={() => setCurrentView('settings')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Settings size={18} />
+              <Settings size={16} />
               <span>Settings</span>
             </div>
           </div>
@@ -82,7 +107,7 @@ const VaultDashboard = () => {
             <span>{user.username}</span>
           </div>
           <button onClick={logout} className="logout-btn" title="Logout">
-            <LogOut size={20} />
+            <LogOut size={18} />
           </button>
         </div>
       </aside>
@@ -92,60 +117,117 @@ const VaultDashboard = () => {
           <>
             <header className="top-bar">
               <div className="search-bar">
-                <Search size={20} />
-                <input 
-                  type="text" 
-                  placeholder="Search vault..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                <Search size={18} />
+                <input type="text" placeholder="Search vault..."
+                  value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
-              <button className="btn-primary" onClick={() => { setEditingEntry(null); setIsModalOpen(true); }}>
-                <Plus size={20} />
-                Add Item
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  className={`fav-filter-btn ${showFavoritesOnly ? 'active' : ''}`}
+                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                  title="Show favorites only"
+                >
+                  <Star size={16} fill={showFavoritesOnly ? '#ffa502' : 'none'} />
+                  {favCount > 0 && <span className="fav-count">{favCount}</span>}
+                </button>
+                <div className="add-menu-wrap" style={{ position: 'relative' }}>
+                  <button className="btn-primary" onClick={() => setAddMenuOpen(!addMenuOpen)}>
+                    <Plus size={16} />
+                    Add
+                    <ChevronDown size={14} />
+                  </button>
+                  {addMenuOpen && (
+                    <>
+                      <div className="add-menu-backdrop" onClick={() => setAddMenuOpen(false)} />
+                      <div className="add-menu-dropdown">
+                        <button onClick={() => handleAdd('password')}>
+                          <Key size={16} /> Password
+                        </button>
+                        <button onClick={() => handleAdd('card')}>
+                          <CreditCard size={16} /> Card
+                        </button>
+                        <button onClick={() => handleAdd('note')}>
+                          <FileText size={16} /> Note
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </header>
 
-            <div className="category-filter-bar">
-              <button
-                className={`category-pill ${selectedCategory === 'all' ? 'active' : ''}`}
-                onClick={() => setSelectedCategory('all')}
-              >
-                <Layers size={14} />
-                All
-                <span className="pill-count">{entries.length}</span>
+            {/* Type Tabs */}
+            <div className="type-tabs-bar">
+              <button className={`type-tab ${activeTab === 'passwords' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('passwords'); setShowFavoritesOnly(false); }}>
+                <Key size={14} /> Passwords
+                <span className="tab-count">{passwordEntries.length}</span>
               </button>
-              {CATEGORIES.map((cat) => {
-                const count = categoryCounts[cat.key] || 0;
-                if (count === 0) return null;
-                const Icon = cat.icon;
-                return (
-                  <button
-                    key={cat.key}
-                    className={`category-pill ${selectedCategory === cat.key ? 'active' : ''}`}
-                    onClick={() => setSelectedCategory(cat.key)}
-                    style={selectedCategory === cat.key ? { borderColor: cat.color, background: `${cat.color}15`, color: cat.color } : {}}
-                  >
-                    <Icon size={14} style={{ color: selectedCategory === cat.key ? cat.color : undefined }} />
-                    {cat.label}
-                    <span className="pill-count">{count}</span>
-                  </button>
-                );
-              })}
+              <button className={`type-tab ${activeTab === 'cards' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('cards'); setShowFavoritesOnly(false); }}>
+                <CreditCard size={14} /> Cards
+                <span className="tab-count">{cardEntries.length}</span>
+              </button>
+              <button className={`type-tab ${activeTab === 'notes' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('notes'); setShowFavoritesOnly(false); }}>
+                <FileText size={14} /> Notes
+                <span className="tab-count">{noteEntries.length}</span>
+              </button>
             </div>
 
+            {/* Category filter pills (only for passwords) */}
+            {activeTab === 'passwords' && !showFavoritesOnly && (
+              <div className="category-filter-bar">
+                <button className={`category-pill ${selectedCategory === 'all' ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory('all')}>
+                  <Layers size={12} /> All
+                  <span className="pill-count">{passwordEntries.length}</span>
+                </button>
+                {CATEGORIES.map((cat) => {
+                  const count = categoryCounts[cat.key] || 0;
+                  if (count === 0) return null;
+                  const Icon = cat.icon;
+                  return (
+                    <button key={cat.key}
+                      className={`category-pill ${selectedCategory === cat.key ? 'active' : ''}`}
+                      onClick={() => setSelectedCategory(cat.key)}
+                      style={selectedCategory === cat.key ? { borderColor: cat.color, background: `${cat.color}15`, color: cat.color } : {}}>
+                      <Icon size={12} style={{ color: selectedCategory === cat.key ? cat.color : undefined }} />
+                      {cat.label}
+                      <span className="pill-count">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="content-area">
-              <PasswordList searchQuery={searchQuery} onEditEntry={handleEditEntry} selectedCategory={selectedCategory} />
+              {activeTab === 'passwords' && (
+                <PasswordList searchQuery={searchQuery} onEditEntry={handleEditEntry}
+                  selectedCategory={selectedCategory} showFavoritesOnly={showFavoritesOnly} />
+              )}
+              {activeTab === 'cards' && (
+                <CardList searchQuery={searchQuery} onEditEntry={handleEditEntry}
+                  showFavoritesOnly={showFavoritesOnly} />
+              )}
+              {activeTab === 'notes' && (
+                <NoteList searchQuery={searchQuery} onEditEntry={handleEditEntry}
+                  showFavoritesOnly={showFavoritesOnly} />
+              )}
             </div>
           </>
         ) : currentView === 'profile' ? (
-          <ProfilePage />
+          <div className="content-area">
+            <ProfilePage />
+          </div>
         ) : (
-          <SettingsPage />
+          <div className="content-area">
+            <SettingsPage />
+          </div>
         )}
       </main>
 
-      {isModalOpen && <PasswordModal onClose={handleCloseModal} initialData={editingEntry} />}
+      {renderModal()}
     </div>
   );
 };

@@ -26,7 +26,10 @@ const SettingsPage = () => {
        service_name: e.service_name,
        account_username: e.account_username,
        password: e.password,
-       website_url: e.website_url, // Added website_url export support
+       website_url: e.website_url,
+       category: e.category,
+       entry_type: e.entry_type || 'password',
+       decrypted_data: e.decrypted_data || null,
        exported_at: new Date().toISOString()
     }));
     // ...
@@ -61,13 +64,25 @@ const SettingsPage = () => {
         setImportStatus('Importing...');
         
         for (const item of importedData) {
-          if (item.service_name && item.password) {
-            await addEntry({
+          if (item.service_name) {
+            const entryType = item.entry_type || 'password';
+            const payload = {
               service_name: item.service_name,
               account_username: item.account_username || '',
-              password: item.password,
-              website_url: item.website_url // Added import support
-            });
+              website_url: item.website_url || '',
+              category: item.category || 'other',
+              entry_type: entryType,
+            };
+            if (entryType === 'card' && item.decrypted_data) {
+              payload.card_data = item.decrypted_data;
+            } else if (entryType === 'note' && item.decrypted_data) {
+              payload.note_data = item.decrypted_data;
+            } else if (item.password) {
+              payload.password = item.password;
+            } else {
+              continue;
+            }
+            await addEntry(payload);
             count++;
           }
         }

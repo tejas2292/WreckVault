@@ -73,6 +73,30 @@ const initDb = async (retries = 5) => {
           );
         }
 
+        // Migration: Add entry_type to vault_entries
+        try {
+          await pool.query(
+            `ALTER TABLE vault_entries ADD COLUMN IF NOT EXISTS entry_type VARCHAR(20) DEFAULT 'password';`,
+          );
+        } catch (e) {
+          console.log(
+            "Migration note: entry_type column might already exist " +
+              e.message,
+          );
+        }
+
+        // Migration: Add is_favorite to vault_entries
+        try {
+          await pool.query(
+            `ALTER TABLE vault_entries ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT false;`,
+          );
+        } catch (e) {
+          console.log(
+            "Migration note: is_favorite column might already exist " +
+              e.message,
+          );
+        }
+
         console.log("Database Schema Ready.");
         return;
       } finally {

@@ -313,6 +313,7 @@ input:focus {
 
 .main-content {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -360,9 +361,10 @@ input:focus {
 
 .search-bar input:focus { box-shadow: none; border: none;}
 
-/* --- Password Grid --- */
+/* --- Password Grid & scrollable pages (Profile, Settings) --- */
 .content-area {
   flex: 1;
+  min-height: 0;
   padding: 2.5rem;
   overflow-y: auto;
 }
@@ -764,6 +766,556 @@ input:focus {
 .category-dropdown-item.active {
   background: rgba(108, 92, 231, 0.1);
   color: var(--accent-secondary);
+}
+
+/* --- Type Tabs Bar --- */
+.type-tabs-bar {
+  display: flex;
+  gap: 0;
+  background: rgba(5, 5, 7, 0.6);
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.type-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.type-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.02);
+}
+
+.type-tab.active {
+  color: var(--accent-secondary);
+  border-bottom-color: var(--accent-primary);
+  background: rgba(108, 92, 231, 0.05);
+}
+
+.tab-count {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.type-tab.active .tab-count {
+  background: rgba(108, 92, 231, 0.2);
+}
+
+/* --- Favorite Button --- */
+.fav-btn {
+  background: transparent;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.fav-btn:hover {
+  color: #ffa502 !important;
+  transform: scale(1.1);
+}
+
+.fav-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.fav-filter-btn:hover {
+  border-color: #ffa502;
+  color: #ffa502;
+}
+
+.fav-filter-btn.active {
+  background: rgba(255, 165, 2, 0.1);
+  border-color: rgba(255, 165, 2, 0.3);
+  color: #ffa502;
+}
+
+.fav-count {
+  background: rgba(255, 165, 2, 0.2);
+  padding: 1px 5px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* --- Add Menu Dropdown --- */
+.add-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+}
+
+.add-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #1a1a24;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  min-width: 160px;
+  z-index: 10;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  animation: zoomIn 0.15s ease;
+}
+
+.add-menu-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: all 0.15s;
+}
+
+.add-menu-dropdown button:last-child { border-bottom: none; }
+
+.add-menu-dropdown button:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+
+/* --- Password Generator --- */
+.gen-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(108, 92, 231, 0.1);
+  border: 1px solid rgba(108, 92, 231, 0.2);
+  color: var(--accent-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.gen-toggle-btn:hover {
+  background: rgba(108, 92, 231, 0.2);
+}
+
+.generator-panel {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: zoomIn 0.2s ease;
+}
+
+.gen-length-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.gen-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 60%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.1);
+  outline: none;
+  padding: 0;
+  border: none;
+}
+
+.gen-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.gen-options-row {
+  display: flex;
+  gap: 6px;
+}
+
+.gen-option-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: monospace;
+  transition: all 0.15s;
+}
+
+.gen-option-btn.active {
+  background: rgba(108, 92, 231, 0.15);
+  border-color: rgba(108, 92, 231, 0.3);
+  color: var(--accent-secondary);
+}
+
+.gen-option-btn:hover:not(.active) {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+}
+
+.gen-btn {
+  padding: 8px !important;
+  font-size: 0.8rem !important;
+}
+
+/* --- Password Strength Meter --- */
+.strength-meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.strength-bars {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+}
+
+.strength-bar {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  transition: background 0.3s;
+}
+
+.strength-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* --- Credit Card Preview (in Modal) --- */
+.credit-card-preview {
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 1.25rem;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.credit-card-preview::before {
+  content: '';
+  position: absolute;
+  top: -30%;
+  right: -20%;
+  width: 200px;
+  height: 200px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 50%;
+}
+
+.credit-card-preview::after {
+  content: '';
+  position: absolute;
+  bottom: -40%;
+  left: -10%;
+  width: 180px;
+  height: 180px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50%;
+}
+
+.cc-chip {
+  width: 36px;
+  height: 26px;
+  background: linear-gradient(135deg, #e0c96e, #c4a82e);
+  border-radius: 5px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.cc-number {
+  font-size: 1.1rem;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.cc-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  position: relative;
+  z-index: 1;
+}
+
+.cc-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  opacity: 0.7;
+  letter-spacing: 0.5px;
+}
+
+.cc-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.cc-brand {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+/* --- Credit Card Display (in List) --- */
+.card-entry {
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow: hidden;
+}
+
+.credit-card-display {
+  border-radius: 14px 14px 0 0;
+  padding: 16px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.credit-card-display::before {
+  content: '';
+  position: absolute;
+  top: -30%;
+  right: -20%;
+  width: 160px;
+  height: 160px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 50%;
+}
+
+.cc-display-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.cc-chip-small {
+  width: 28px;
+  height: 20px;
+  background: linear-gradient(135deg, #e0c96e, #c4a82e);
+  border-radius: 4px;
+}
+
+.cc-display-number {
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  margin: 12px 0 10px;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.cc-display-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  position: relative;
+  z-index: 1;
+}
+
+.cc-display-label {
+  font-size: 0.5rem;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.cc-display-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.cc-display-brand {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  opacity: 0.8;
+}
+
+.card-entry-footer {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-entry-footer h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* --- Note Card --- */
+.note-card {
+  border-left: 3px solid var(--accent-primary);
+}
+
+.note-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.note-card-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.note-icon-wrap {
+  width: 36px;
+  height: 36px;
+  background: rgba(108, 92, 231, 0.15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-secondary);
+}
+
+.note-content-area {
+  background: rgba(0,0,0,0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  min-height: 50px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.note-content-area:hover {
+  background: rgba(0,0,0,0.25);
+}
+
+.note-preview {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.note-full-content {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  margin: 0;
+}
+
+/* --- Note Textarea --- */
+.note-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 120px;
+  transition: all 0.2s ease;
+}
+
+.note-textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.1);
+}
+
+/* --- Autocomplete dropdown --- */
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #1a1a24;
+  border: 1px solid var(--border-glass);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  z-index: 10;
+  max-height: 150px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.autocomplete-dropdown li {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: all 0.15s;
+}
+
+.autocomplete-dropdown li:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
 }
 
 /* SweetAlert Customization Override */
