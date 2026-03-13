@@ -1518,6 +1518,126 @@ input:focus {
   font-family: var(--font-family);
 }
 
+/* --- JWT Secret Generator (Generator page) --- */
+.generator-jwt .generator-hero-icon.generator-jwt-icon {
+  background: rgba(46, 213, 115, 0.12);
+  border-color: rgba(46, 213, 115, 0.25);
+  color: var(--success);
+}
+
+.generator-jwt-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.5px;
+}
+
+.generator-jwt-length {
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.generator-jwt-length .gen-slider {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.generator-jwt-length-marks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.generator-jwt-generate-btn {
+  margin-bottom: 1rem;
+}
+
+.generator-jwt-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.generator-jwt-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.generator-jwt-toggles {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-glass);
+}
+
+.generator-jwt-toggle.generator-jwt-toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.generator-jwt-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.generator-jwt-toggle-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid var(--border-glass);
+  border-radius: 11px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.generator-jwt-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.generator-jwt-toggle-input:checked + .generator-jwt-toggle-track {
+  background: rgba(108, 92, 231, 0.25);
+  border-color: var(--accent-primary);
+}
+
+.generator-jwt-toggle-input:checked + .generator-jwt-toggle-track::after {
+  transform: translateX(18px);
+  background: var(--accent-secondary);
+}
+
+.generator-jwt-toggle-input:focus-visible + .generator-jwt-toggle-track {
+  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.3);
+}
+
+.generator-jwt-toggle-label {
+  user-select: none;
+}
+
+.generator-jwt-security-msg {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
 /* ===========================
    RESPONSIVE BREAKPOINTS
    =========================== */

@@ -12,7 +12,7 @@ import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
 import {
   LogOut, Plus, Search, User as UserIcon, LayoutGrid, Settings,
-  Layers, Key, CreditCard, FileText, Star, ChevronDown, Sparkles, Menu
+  Layers, Key, CreditCard, FileText, Star, ChevronDown, Sparkles, Menu, KeyRound
 } from 'lucide-react';
 import CATEGORIES from '../constants/categories';
 
@@ -31,6 +31,7 @@ const VaultDashboard = () => {
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
 
   const [currentView, setCurrentView] = useState('dashboard');
+  const [generatorTab, setGeneratorTab] = useState('password');
 
   const passwordEntries = entries.filter(e => !e.entry_type || e.entry_type === 'password');
   const cardEntries = entries.filter(e => e.entry_type === 'card');
@@ -314,9 +315,28 @@ const VaultDashboard = () => {
               )}
             </div>
           </>
+        ) : currentView === 'generator' ? (
+          <>
+            <div className="type-tabs-bar">
+              <button
+                className={`type-tab ${generatorTab === 'password' ? 'active' : ''}`}
+                onClick={() => setGeneratorTab('password')}
+              >
+                <Key size={14} /> Password
+              </button>
+              <button
+                className={`type-tab ${generatorTab === 'jwt' ? 'active' : ''}`}
+                onClick={() => setGeneratorTab('jwt')}
+              >
+                <KeyRound size={14} /> JWT Secret
+              </button>
+            </div>
+            <div className="content-area">
+              <PasswordGeneratorPage generatorTab={generatorTab} />
+            </div>
+          </>
         ) : (
           <div className="content-area">
-            {currentView === 'generator' && <PasswordGeneratorPage />}
             {currentView === 'profile' && <ProfilePage />}
             {currentView === 'settings' && <SettingsPage />}
           </div>

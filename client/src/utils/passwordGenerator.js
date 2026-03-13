@@ -69,3 +69,19 @@ export const getPasswordStrength = (password) => {
   const level = levels[Math.min(score, 6)];
   return { score: Math.min(score, 6), maxScore: 6, ...level };
 };
+
+/**
+ * Generate a cryptographically secure JWT secret key.
+ * @param {number} byteLength - Number of random bytes. Use ceil((bits/4)*6/8) so output length = bits/4 chars (e.g. 24 bytes → 32 chars = 128 bits).
+ * @returns {string} Base64url-encoded secret (no padding).
+ */
+export const generateJwtSecret = (byteLength = 32) => {
+  const bytes = new Uint8Array(byteLength);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < byteLength; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  const base64 = btoa(String.fromCharCode(...bytes));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
