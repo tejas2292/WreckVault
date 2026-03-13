@@ -51,7 +51,7 @@ const PasswordGeneratorPage = ({ generatorTab = "password" }) => {
   const jwtByteLength = Math.max(1, Math.ceil(((jwtLengthBits / 4) * 6) / 8));
   useEffect(() => {
     setJwtSecret(generateJwtSecret(jwtByteLength));
-  }, [jwtLengthBits]);
+  }, [jwtByteLength]);
 
   const handleRegenerate = () => {
     if (!canGenerate) return;
