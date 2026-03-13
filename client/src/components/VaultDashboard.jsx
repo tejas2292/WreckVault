@@ -7,11 +7,12 @@ import CardList from './CardList';
 import CardModal from './CardModal';
 import NoteList from './NoteList';
 import NoteModal from './NoteModal';
+import PasswordGeneratorPage from './PasswordGeneratorPage';
 import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
 import {
   LogOut, Plus, Search, User as UserIcon, LayoutGrid, Settings,
-  Layers, Key, CreditCard, FileText, Star, ChevronDown
+  Layers, Key, CreditCard, FileText, Star, ChevronDown, Sparkles, Menu
 } from 'lucide-react';
 import CATEGORIES from '../constants/categories';
 
@@ -26,6 +27,8 @@ const VaultDashboard = () => {
   const [activeTab, setActiveTab] = useState('passwords');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
 
   const [currentView, setCurrentView] = useState('dashboard');
 
@@ -58,6 +61,20 @@ const VaultDashboard = () => {
     setAddMenuOpen(false);
   };
 
+  const handleNavigate = (view) => {
+    setCurrentView(view);
+    setMobileMenuOpen(false);
+    setAvatarMenuOpen(false);
+    setAddMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    setMobileMenuOpen(false);
+    setAvatarMenuOpen(false);
+    setAddMenuOpen(false);
+    logout();
+  };
+
   const renderModal = () => {
     if (!isModalOpen) return null;
     if (modalType === 'card') return <CardModal onClose={handleCloseModal} initialData={editingEntry} />;
@@ -67,95 +84,176 @@ const VaultDashboard = () => {
 
   return (
     <div className="dashboard-layout">
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <img src="/logo.png" alt="Logo" style={{ width: '36px', height: '36px' }} />
-          <h2>WreckVault</h2>
-        </div>
-        <nav className="sidebar-nav">
-          <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setCurrentView('dashboard')}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      {mobileMenuOpen && (
+        <div
+          className="nav-backdrop"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      <nav className="navbar">
+        <div className="navbar-left">
+          <button
+            className="navbar-hamburger"
+            onClick={() => { setMobileMenuOpen(!mobileMenuOpen); setAvatarMenuOpen(false); setAddMenuOpen(false); }}
+            aria-label="Open menu"
+          >
+            <Menu size={20} />
+          </button>
+
+          <div className="navbar-brand" onClick={() => handleNavigate('dashboard')}>
+            <img src="/logo.png" alt="Logo" />
+            <span>WreckVault</span>
+          </div>
+
+          <div className="navbar-links">
+            <button
+              className={`navbar-link ${currentView === 'dashboard' ? 'active' : ''}`}
+              onClick={() => handleNavigate('dashboard')}
+            >
               <LayoutGrid size={16} />
-              <span>Vault</span>
-            </div>
+              Vault
+            </button>
+            <button
+              className={`navbar-link ${currentView === 'generator' ? 'active' : ''}`}
+              onClick={() => handleNavigate('generator')}
+            >
+              <Sparkles size={16} />
+              Generator
+            </button>
           </div>
-          <div className={`nav-item ${currentView === 'profile' ? 'active' : ''}`}
-            onClick={() => setCurrentView('profile')}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <UserIcon size={16} />
-              <span>Profile</span>
+        </div>
+
+        <div className="navbar-right">
+          {currentView === 'dashboard' ? (
+            <div className="navbar-search">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Search vault..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-          </div>
-          <div className={`nav-item ${currentView === 'settings' ? 'active' : ''}`}
-            onClick={() => setCurrentView('settings')}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Settings size={16} />
-              <span>Settings</span>
+          ) : (
+            <div className="navbar-title">
+              {currentView === 'generator' && 'Generator'}
+              {currentView === 'profile' && 'Profile'}
+              {currentView === 'settings' && 'Settings'}
             </div>
-          </div>
-        </nav>
-        <div className="sidebar-footer">
-          <div className="user-info">
-            <div className="user-avatar">
-              {user.profile_image ? (
-                <img src={user.profile_image} alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-              ) : (
-                user.username[0].toUpperCase()
+          )}
+
+          {currentView === 'dashboard' && (
+            <button
+              className={`fav-filter-btn ${showFavoritesOnly ? 'active' : ''}`}
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              title="Show favorites only"
+            >
+              <Star size={16} fill={showFavoritesOnly ? '#ffa502' : 'none'} />
+              {favCount > 0 && <span className="fav-count">{favCount}</span>}
+            </button>
+          )}
+
+          {currentView === 'dashboard' && (
+            <div className="add-menu-wrap" style={{ position: 'relative' }}>
+              <button
+                className="btn-primary"
+                onClick={() => { setAddMenuOpen(!addMenuOpen); setMobileMenuOpen(false); setAvatarMenuOpen(false); }}
+              >
+                <Plus size={16} />
+                <span className="add-btn-text">Add</span>
+                <ChevronDown size={14} />
+              </button>
+              {addMenuOpen && (
+                <>
+                  <div className="add-menu-backdrop" onClick={() => setAddMenuOpen(false)} />
+                  <div className="add-menu-dropdown">
+                    <button onClick={() => handleAdd('password')}>
+                      <Key size={16} /> Password
+                    </button>
+                    <button onClick={() => handleAdd('card')}>
+                      <CreditCard size={16} /> Card
+                    </button>
+                    <button onClick={() => handleAdd('note')}>
+                      <FileText size={16} /> Note
+                    </button>
+                  </div>
+                </>
               )}
             </div>
-            <span>{user.username}</span>
+          )}
+
+          <div className="avatar-menu">
+            <button
+              className="avatar-btn"
+              onClick={() => { setAvatarMenuOpen(!avatarMenuOpen); setMobileMenuOpen(false); setAddMenuOpen(false); }}
+              title={user.username}
+            >
+              <div className="user-avatar">
+                {user.profile_image ? (
+                  <img
+                    src={user.profile_image}
+                    alt="User"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                  />
+                ) : (
+                  user.username[0].toUpperCase()
+                )}
+              </div>
+            </button>
+
+            {avatarMenuOpen && (
+              <>
+                <div className="nav-menu-backdrop" onClick={() => setAvatarMenuOpen(false)} />
+                <div className="avatar-dropdown">
+                  <div className="avatar-dropdown-header">
+                    <UserIcon size={16} />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{user.username}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Account</span>
+                    </div>
+                  </div>
+                  <button onClick={() => handleNavigate('profile')}>
+                    <UserIcon size={16} /> Profile
+                  </button>
+                  <button onClick={() => handleNavigate('settings')}>
+                    <Settings size={16} /> Settings
+                  </button>
+                  <div className="avatar-dropdown-divider" />
+                  <button className="danger" onClick={handleLogout}>
+                    <LogOut size={16} /> Logout
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-          <button onClick={logout} className="logout-btn" title="Logout">
-            <LogOut size={18} />
-          </button>
         </div>
-      </aside>
+
+        {mobileMenuOpen && (
+          <div className="mobile-nav-dropdown">
+            <button onClick={() => handleNavigate('dashboard')}>
+              <LayoutGrid size={16} /> Vault
+            </button>
+            <button onClick={() => handleNavigate('generator')}>
+              <Sparkles size={16} /> Generator
+            </button>
+            <div className="avatar-dropdown-divider" />
+            <button onClick={() => handleNavigate('profile')}>
+              <UserIcon size={16} /> Profile
+            </button>
+            <button onClick={() => handleNavigate('settings')}>
+              <Settings size={16} /> Settings
+            </button>
+            <button className="danger" onClick={handleLogout}>
+              <LogOut size={16} /> Logout
+            </button>
+          </div>
+        )}
+      </nav>
 
       <main className="main-content">
         {currentView === 'dashboard' ? (
           <>
-            <header className="top-bar">
-              <div className="search-bar">
-                <Search size={18} />
-                <input type="text" placeholder="Search vault..."
-                  value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <button
-                  className={`fav-filter-btn ${showFavoritesOnly ? 'active' : ''}`}
-                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                  title="Show favorites only"
-                >
-                  <Star size={16} fill={showFavoritesOnly ? '#ffa502' : 'none'} />
-                  {favCount > 0 && <span className="fav-count">{favCount}</span>}
-                </button>
-                <div className="add-menu-wrap" style={{ position: 'relative' }}>
-                  <button className="btn-primary" onClick={() => setAddMenuOpen(!addMenuOpen)}>
-                    <Plus size={16} />
-                    Add
-                    <ChevronDown size={14} />
-                  </button>
-                  {addMenuOpen && (
-                    <>
-                      <div className="add-menu-backdrop" onClick={() => setAddMenuOpen(false)} />
-                      <div className="add-menu-dropdown">
-                        <button onClick={() => handleAdd('password')}>
-                          <Key size={16} /> Password
-                        </button>
-                        <button onClick={() => handleAdd('card')}>
-                          <CreditCard size={16} /> Card
-                        </button>
-                        <button onClick={() => handleAdd('note')}>
-                          <FileText size={16} /> Note
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </header>
-
             {/* Type Tabs */}
             <div className="type-tabs-bar">
               <button className={`type-tab ${activeTab === 'passwords' ? 'active' : ''}`}
@@ -216,13 +314,11 @@ const VaultDashboard = () => {
               )}
             </div>
           </>
-        ) : currentView === 'profile' ? (
-          <div className="content-area">
-            <ProfilePage />
-          </div>
         ) : (
           <div className="content-area">
-            <SettingsPage />
+            {currentView === 'generator' && <PasswordGeneratorPage />}
+            {currentView === 'profile' && <ProfilePage />}
+            {currentView === 'settings' && <SettingsPage />}
           </div>
         )}
       </main>

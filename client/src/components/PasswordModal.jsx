@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useVault } from '../contexts/VaultContext';
-import { X, Save, Eye, EyeOff, ChevronDown, RefreshCw, Sliders } from 'lucide-react';
+import { X, Save, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import CATEGORIES, { getCategoryByKey } from '../constants/categories';
 import PasswordStrength from './PasswordStrength';
-import { generatePassword } from '../utils/passwordGenerator';
 
 const PasswordModal = ({ onClose, initialData = null }) => {
   const { addEntry, updateEntry, entries } = useVault();
@@ -17,10 +16,6 @@ const PasswordModal = ({ onClose, initialData = null }) => {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showGenerator, setShowGenerator] = useState(false);
-  const [genOptions, setGenOptions] = useState({
-    length: 16, uppercase: true, lowercase: true, numbers: true, symbols: true
-  });
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -40,12 +35,6 @@ const PasswordModal = ({ onClose, initialData = null }) => {
   const selectSuggestion = (url) => {
     setFormData({...formData, website_url: url});
     setShowSuggestions(false);
-  };
-
-  const handleGenerate = () => {
-    const pwd = generatePassword(genOptions);
-    setFormData({...formData, password: pwd});
-    setShowPassword(true);
   };
 
   const handleSubmit = async (e) => {
@@ -142,41 +131,7 @@ const PasswordModal = ({ onClose, initialData = null }) => {
             />
           </div>
           <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <label style={{ marginBottom: 0 }}>Password</label>
-              <button type="button" className="gen-toggle-btn" onClick={() => setShowGenerator(!showGenerator)}>
-                <Sliders size={14} />
-                Generator
-              </button>
-            </div>
-            {showGenerator && (
-              <div className="generator-panel">
-                <div className="gen-length-row">
-                  <span>Length: {genOptions.length}</span>
-                  <input type="range" min="8" max="64" value={genOptions.length}
-                    onChange={e => setGenOptions({...genOptions, length: parseInt(e.target.value)})}
-                    className="gen-slider" />
-                </div>
-                <div className="gen-options-row">
-                  {[
-                    { key: 'uppercase', label: 'ABC' },
-                    { key: 'lowercase', label: 'abc' },
-                    { key: 'numbers', label: '123' },
-                    { key: 'symbols', label: '#$%' },
-                  ].map(opt => (
-                    <button key={opt.key} type="button"
-                      className={`gen-option-btn ${genOptions[opt.key] ? 'active' : ''}`}
-                      onClick={() => setGenOptions({...genOptions, [opt.key]: !genOptions[opt.key]})}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                <button type="button" className="btn-primary gen-btn" onClick={handleGenerate}>
-                  <RefreshCw size={14} />
-                  Generate Password
-                </button>
-              </div>
-            )}
+            <label>Password</label>
             <div style={{ position: 'relative' }}>
               <input
                 type={showPassword ? "text" : "password"}
