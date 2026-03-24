@@ -8,6 +8,7 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true, // Needed for Docker
+    allowedHosts: ['vault.tejaspatil.co.in'],
     proxy: {
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:5000',
