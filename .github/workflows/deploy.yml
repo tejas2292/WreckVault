@@ -49,3 +49,23 @@ jobs:
           git reset --hard origin/main
           docker compose pull --quiet 2>/dev/null || true
           docker compose up -d --build
+
+      - name: Notify deployment
+        if: success()
+        env:
+          DEPLOY_WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+        run: |
+          curl -s -X POST "$DEPLOY_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: DiscordBot (https://hermes-agent.local, 1.0)" \
+            -d "{\"content\": \"🚀 **[${{ github.event.repository.name }}]** Deployed to production - $(TZ=Asia/Kolkata date '+%d %b %H:%M IST')\"}"
+
+      - name: Notify deployment failure
+        if: failure()
+        env:
+          DEPLOY_WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+        run: |
+          curl -s -X POST "$DEPLOY_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: DiscordBot (https://hermes-agent.local, 1.0)" \
+            -d "{\"content\": \"❌ **[${{ github.event.repository.name }}]** Deployment FAILED - $(TZ=Asia/Kolkata date '+%d %b %H:%M IST')\"}"
