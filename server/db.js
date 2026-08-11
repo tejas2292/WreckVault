@@ -97,6 +97,28 @@ const initDb = async (retries = 5) => {
           );
         }
 
+        // Migration: Add login_logs table (login attempt audit trail - username, IP, success, timestamp)
+        try {
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS login_logs (
+              id SERIAL PRIMARY KEY,
+              username VARCHAR(255),
+              ip_address VARCHAR(100),
+              success BOOLEAN NOT NULL,
+              user_agent TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+          `);
+          await pool.query(
+            `CREATE INDEX IF NOT EXISTS idx_login_logs_created_at ON login_logs (created_at DESC);`,
+          );
+        } catch (e) {
+          console.log(
+            "Migration note: login_logs table might already exist " +
+              e.message,
+          );
+        }
+
         console.log("Database Schema Ready.");
         return;
       } finally {

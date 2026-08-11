@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const { pool, initDb } = require('./db');
 
 const app = express();
@@ -13,12 +14,33 @@ app.use(express.json());
 // Initialize DB on start
 initDb();
 
+// Helper: best-effort real client IP (handles a future reverse proxy via
+// X-Forwarded-For, strips the ::ffff: IPv4-mapped-IPv6 prefix Node adds for
+// plain IPv4 connections)
+const getClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  const raw = (forwarded ? forwarded.split(',')[0] : req.socket.remoteAddress) || '';
+  return raw.trim().replace(/^::ffff:/, '');
+};
+
+// Rate limiter for the login endpoint: max 4 attempts per IP per 15 minutes.
+// Only failed attempts count against the limit (a user who logs in
+// successfully, then reloads/re-logs-in later, shouldn't get locked out).
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 4,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+});
+
 // --- Auth Routes ---
 
 // Register
 app.post('/api/auth/register', async (req, res) => {
   const { username, password } = req.body;
-  
+
   if (!username || !password) {
     return res.status(400).json({ error: "Username and password required" });
   }
@@ -48,13 +70,27 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // Login
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
+  const ip = getClientIp(req);
+  const userAgent = req.headers['user-agent'] || null;
+
+  const logAttempt = async (success) => {
+    try {
+      await pool.query(
+        'INSERT INTO login_logs (username, ip_address, success, user_agent) VALUES ($1, $2, $3, $4)',
+        [username || null, ip, success, userAgent]
+      );
+    } catch (logErr) {
+      console.error('Failed to write login log:', logErr.message);
+    }
+  };
 
   try {
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    
+
     if (result.rows.length === 0) {
+      await logAttempt(false);
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
@@ -62,20 +98,23 @@ app.post('/api/auth/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
+      await logAttempt(false);
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
-    // For simplicity in this demo, we return the user ID. 
+    await logAttempt(true);
+
+    // For simplicity in this demo, we return the user ID.
     // In production, use JWT or Session Cookies.
     // We will just send back the user ID to store in client memory state.
-    res.json({ 
-      message: "Login successful", 
-      user: { 
-        id: user.id, 
-        username: user.username, 
+    res.json({
+      message: "Login successful",
+      user: {
+        id: user.id,
+        username: user.username,
         created_at: user.created_at,
-        profile_image: user.profile_image 
-      } 
+        profile_image: user.profile_image
+      }
     });
   } catch (err) {
     console.error(err);
@@ -140,7 +179,7 @@ app.delete('/api/auth/me', async (req, res) => {
 // --- Vault Routes ---
 // Note: In production, these should be protected by middleware verifying session/JWT.
 // For this prototype, we will trust the 'user_id' sent in the headers or body,
-// or just implemented simply. Let's use a header 'x-user-id' for simplicity 
+// or just implemented simply. Let's use a header 'x-user-id' for simplicity
 // to avoid implementing full JWT infrastructure in this single pass.
 
 const requireAuth = (req, res, next) => {
@@ -151,6 +190,21 @@ const requireAuth = (req, res, next) => {
   req.userId = userId;
   next();
 };
+
+// Get recent login attempts (audit log) - who logged in / tried to, from what IP, success or fail
+app.get('/api/auth/login-logs', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+    const result = await pool.query(
+      'SELECT id, username, ip_address, success, user_agent, created_at FROM login_logs ORDER BY created_at DESC LIMIT $1',
+      [limit]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch login logs" });
+  }
+});
 
 // GET all passwords
 app.get('/api/vault', requireAuth, async (req, res) => {
@@ -189,7 +243,7 @@ app.put('/api/vault/:id', requireAuth, async (req, res) => {
 
   try {
     const result = await pool.query(
-      `UPDATE vault_entries 
+      `UPDATE vault_entries
        SET service_name = $1, account_username = $2, encrypted_blob = $3, iv = $4, website_url = $5, category = $6, entry_type = $7, updated_at = CURRENT_TIMESTAMP
        WHERE id = $8 AND user_id = $9
        RETURNING *`,
