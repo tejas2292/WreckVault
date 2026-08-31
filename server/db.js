@@ -6,7 +6,10 @@ const pool = new Pool({
 });
 
 // Initialize Database Schema
-const initDb = async (retries = 5) => {
+// Retry for ~2.5 minutes. Postgres and this service start in parallel on
+// host boot; the old 5 x 5s = 25s window expired before Postgres was
+// accepting connections, and the process exited for good.
+const initDb = async (retries = 30) => {
   while (retries > 0) {
     try {
       const client = await pool.connect();

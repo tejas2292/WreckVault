@@ -18,7 +18,12 @@ services:
       - /app/node_modules
     networks:
       - wreckcloud
-    command: npm run dev
+      - postgresql_default
+    # No `command:` override — the Dockerfile's CMD (`npm start`) runs the
+    # plain node process. Under `npm run dev`, nodemon caught a fatal DB-connect
+    # crash and parked ("waiting for file changes"), keeping the container
+    # alive so `restart: always` never fired. Cost a 3-day silent outage
+    # after the 2026-08-28 reboot.
 
   frontend-client:
     build:
@@ -41,3 +46,8 @@ services:
 networks:
   wreckcloud:
     driver: bridge
+  # Created by the CasaOS-managed postgresql stack. Joining it lets the API
+  # reach Postgres by container DNS name instead of the host's LAN IP, which
+  # is not routable from the bridge during early boot (ENETUNREACH).
+  postgresql_default:
+    external: true
