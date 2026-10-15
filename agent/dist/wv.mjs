@@ -1241,8 +1241,8 @@ var init_errors = __esm({
 // src/http.js
 function createHttp({ server, agentId, agentToken, timeoutMs = TIMEOUT_MS }) {
   const auth = `Bearer wva1.${agentId}.${agentToken}`;
-  async function request(method, path3, body) {
-    const url2 = `${server}/api${path3}`;
+  async function request(method, path4, body) {
+    const url2 = `${server}/api${path4}`;
     let res;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -1941,6 +1941,85 @@ var init_totp = __esm({
   }
 });
 
+// src/guardHashes.js
+import fs2 from "node:fs";
+import path3 from "node:path";
+import crypto from "node:crypto";
+function passesGate(raw) {
+  const v = String(raw ?? "").trim();
+  if (v.length < 10 || v.length > 200) return false;
+  if (/\s/.test(v)) return false;
+  if (/^<.*>$/.test(v)) return false;
+  if (/^(see|n\/a|none|unset|tbd|redacted)$/i.test(v)) return false;
+  if (/SECRETS\.md/i.test(v)) return false;
+  if (!/[0-9]/.test(v) || !/[A-Za-z]/.test(v)) return false;
+  if (!/[A-Z]/.test(v) && !/[^A-Za-z0-9]/.test(v)) return false;
+  if (/^\d+\.\d+\.\d+\.\d+/.test(v)) return false;
+  if (/\.(md|js|ts|json|yml|yaml|sh|py|sql|ejs|php|conf)$/i.test(v)) return false;
+  if (/^[a-z][a-z0-9_]*$/.test(v)) return false;
+  if (/@/.test(v) && /\./.test(v)) return false;
+  if (/^(z_glide|portal_|trt_|pmt_)/i.test(v)) return false;
+  if (/^\d{4}-\d{2}-\d{2}/.test(v)) return false;
+  if (/^(Glide-|GLIDE-|wrecker|IDT-|UP-)/i.test(v)) return false;
+  if (/^\w+=https?:/i.test(v)) return false;
+  return true;
+}
+function literalsFromText(text2) {
+  const out = [];
+  for (const line of String(text2 ?? "").split("\n")) {
+    if (!line.startsWith("|")) continue;
+    const cells = line.split("|").map((c) => c.trim());
+    if (cells.length < 3) continue;
+    const label = cells[1];
+    if (!SECRET_LABEL.test(label) || NOT_A_VALUE.test(label)) continue;
+    for (const m of cells.slice(2).join(" | ").matchAll(/`([^`\n]{6,160})`/g)) out.push(m[1].trim());
+  }
+  return out;
+}
+function candidateLiterals(items) {
+  const set2 = /* @__PURE__ */ new Set();
+  for (const it of items) {
+    for (const f of it.fields || []) {
+      if (f.kind === "secret" || f.kind === "totp") set2.add(String(f.value ?? "").trim());
+      if (f.kind === "multi") for (const v of literalsFromText(f.value)) set2.add(v);
+    }
+  }
+  return [...set2].filter(passesGate);
+}
+function writeGuardHashes(items, { device } = {}) {
+  const literals = candidateLiterals(items);
+  const prev = readJson(guardFile());
+  const key = prev?.key ? Buffer.from(prev.key, "base64") : crypto.randomBytes(32);
+  const doc = {
+    v: 1,
+    alg: "hmac-sha256-128",
+    key: key.toString("base64"),
+    lengths: [...new Set(literals.map((v) => v.length))].sort((a, b) => a - b),
+    hashes: [...new Set(literals.map((v) => digest(key, v)))].sort(),
+    prefixLen: PREFIX_LEN,
+    prefixes: [...new Set(literals.map((v) => prefixDigest(key, v)))].sort(),
+    count: literals.length,
+    device: device || null,
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  fs2.mkdirSync(path3.dirname(guardFile()), { recursive: true });
+  writePrivateJson(guardFile(), doc);
+  return doc;
+}
+var guardFile, SECRET_LABEL, NOT_A_VALUE, digest, PREFIX_LEN, prefixDigest;
+var init_guardHashes = __esm({
+  "src/guardHashes.js"() {
+    init_paths();
+    init_files();
+    guardFile = () => path3.join(path3.dirname(cacheFile()), "guard-hashes.json");
+    SECRET_LABEL = /(password|passwd|token|api[\s_-]?key|secret|credential|passphrase|\bpin\b|client[\s_-]?secret|private[\s_-]?key|auth[\s_-]?key|access[\s_-]?key)/i;
+    NOT_A_VALUE = /(set in|stored in|source|used for|scope|path|where|canonical|rotate|verified)/i;
+    digest = (keyBuf, value) => crypto.createHmac("sha256", keyBuf).update(value, "utf8").digest("hex").slice(0, 32);
+    PREFIX_LEN = 4;
+    prefixDigest = (keyBuf, value) => digest(keyBuf, `prefix:${value.slice(0, PREFIX_LEN)}`);
+  }
+});
+
 // src/vault.js
 import os2 from "node:os";
 function publicItem(it) {
@@ -1978,6 +2057,7 @@ var init_vault = __esm({
     init_resolve();
     init_totp();
     init_errors();
+    init_guardHashes();
     MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
     SECRET_PLACEHOLDER = "[secret]";
     isSecretKind = (kind) => SECRET_KINDS.includes(kind);
@@ -2025,7 +2105,18 @@ var init_vault = __esm({
           this.cachedAt = cache.savedAt;
         }
         this.decrypt();
+        this.refreshGuard();
         return this;
+      }
+      // Keep the local guard hash list in step with the vault (see guardHashes.js). Never fatal.
+      refreshGuard() {
+        if (process.env.WV_NO_GUARD === "1") return null;
+        try {
+          return writeGuardHashes(this.readable(), { device: this.conn.name });
+        } catch (e) {
+          this.warn(`could not write the guard hash list (${e.message})`);
+          return null;
+        }
       }
       persist() {
         try {
@@ -2702,8 +2793,8 @@ var init_parseUtil = __esm({
     init_errors2();
     init_en();
     makeIssue = (params) => {
-      const { data, path: path3, errorMaps, issueData } = params;
-      const fullPath = [...path3, ...issueData.path || []];
+      const { data, path: path4, errorMaps, issueData } = params;
+      const fullPath = [...path4, ...issueData.path || []];
       const fullIssue = {
         ...issueData,
         path: fullPath
@@ -2987,11 +3078,11 @@ var init_types = __esm({
     init_parseUtil();
     init_util();
     ParseInputLazyPath = class {
-      constructor(parent, value, path3, key) {
+      constructor(parent, value, path4, key) {
         this._cachedPath = [];
         this.parent = parent;
         this.data = value;
-        this._path = path3;
+        this._path = path4;
         this._key = key;
       }
       get path() {
@@ -6464,10 +6555,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path3) {
-  if (!path3)
+function getElementAtPath(obj, path4) {
+  if (!path4)
     return obj;
-  return path3.reduce((acc, key) => acc?.[key], obj);
+  return path4.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -6726,11 +6817,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path3, issues) {
+function prefixIssues(path4, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path3);
+    iss.path.unshift(path4);
     return iss;
   });
 }
@@ -7251,16 +7342,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path3 = []) => {
+  const processError = (error63, path4 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path4, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -7299,17 +7390,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path3 = []) => {
+  const processError = (error63, path4 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path4, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -7348,8 +7439,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path3) {
+  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path4) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -23851,11 +23942,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path3) {
-  if (path3.length === 0) {
+function getDotPath(path4) {
+  if (path4.length === 0) {
     return "object root";
   }
-  return path3.reduce((acc, seg, index) => {
+  return path4.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -25793,13 +25884,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path3 = ref.slice(1).split("/").filter(Boolean);
-  if (path3.length === 0) {
+  const path4 = ref.slice(1).split("/").filter(Boolean);
+  if (path4.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path3[0] === defsKey) {
-    const key = path3[1] === void 0 ? void 0 : decodeJSONPointerSegment(path3[1]);
+  if (path4[0] === defsKey) {
+    const key = path4[1] === void 0 ? void 0 : decodeJSONPointerSegment(path4[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -34253,8 +34344,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path3) {
-      let input2 = path3;
+    function removeDotSegments(path4) {
+      let input2 = path4;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -34663,8 +34754,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path3 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path3 && path3 !== "/" ? path3 : void 0;
+        const path4 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path4 && path4 !== "/" ? path4 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -38177,12 +38268,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs2, exportName) {
+    function addFormats(ajv, list, fs3, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs2[f]);
+        ajv.addFormat(f, fs3[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -40147,6 +40238,14 @@ Saved to ${file2}
 `);
       return EXIT.OK;
     }
+    case "guard": {
+      const v = await open3();
+      const doc = v.refreshGuard();
+      if (!doc) throw new WvError("The guard hash list could not be written.", EXIT.ERROR);
+      out(`Guard hash list: ${doc.count} values watched (from ${v.readable().length} items).
+`);
+      return EXIT.OK;
+    }
     case "ls": {
       const v = await open3();
       const items = v.list({ query: pos[0], type: flags.type, project: flags.project });
@@ -40245,6 +40344,7 @@ Usage:
   wv get <item> [field]          Print one value (default: the first secret field); logs a read
                                  A one-time code field prints the current code (--raw: the secret)
   wv show <item> [--reveal]      All fields; secrets masked unless --reveal (logs a "*" read)
+  wv guard                       Refresh the local guard hash list (no secrets stored) and show its size
   wv mcp                         Run the MCP server on stdio (for Claude Code)
 
 <item> is an id or a title (exact match wins, else a unique substring).

@@ -11,6 +11,7 @@ import { toPayload, buildPayload, mergePayload, checkType, SECRET_KINDS } from '
 import { resolveItem, resolveField } from './resolve.js';
 import { totpCode } from './totp.js';
 import { WvError, NetworkError, ApiError, EXIT } from './errors.js';
+import { writeGuardHashes } from './guardHashes.js';
 
 export const MASK = '••••••••';
 export const SECRET_PLACEHOLDER = '[secret]';
@@ -62,7 +63,15 @@ export class Vault {
       this.cachedAt = cache.savedAt;
     }
     this.decrypt();
+    this.refreshGuard();
     return this;
+  }
+
+  // Keep the local guard hash list in step with the vault (see guardHashes.js). Never fatal.
+  refreshGuard() {
+    if (process.env.WV_NO_GUARD === '1') return null;
+    try { return writeGuardHashes(this.readable(), { device: this.conn.name }); }
+    catch (e) { this.warn(`could not write the guard hash list (${e.message})`); return null; }
   }
 
   persist() {

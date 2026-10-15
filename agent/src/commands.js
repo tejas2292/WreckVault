@@ -17,6 +17,7 @@ Usage:
   wv get <item> [field]          Print one value (default: the first secret field); logs a read
                                  A one-time code field prints the current code (--raw: the secret)
   wv show <item> [--reveal]      All fields; secrets masked unless --reveal (logs a "*" read)
+  wv guard                       Refresh the local guard hash list (no secrets stored) and show its size
   wv mcp                         Run the MCP server on stdio (for Claude Code)
 
 <item> is an id or a title (exact match wins, else a unique substring).
@@ -95,6 +96,13 @@ export async function run(argv, io = {}) {
     case 'status': {
       const v = await open();
       out(`${formatStatus(v.status())}\n`);
+      return EXIT.OK;
+    }
+    case 'guard': {
+      const v = await open();
+      const doc = v.refreshGuard();
+      if (!doc) throw new WvError('The guard hash list could not be written.', EXIT.ERROR);
+      out(`Guard hash list: ${doc.count} values watched (from ${v.readable().length} items).\n`);
       return EXIT.OK;
     }
     case 'ls': {
