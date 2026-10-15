@@ -7,6 +7,7 @@ import Icon from '../components/Icon.jsx';
 import PasswordInput from '../components/PasswordInput.jsx';
 import StrengthBar from '../components/StrengthBar.jsx';
 import PageTop from './PageTop.jsx';
+import ClaudeAccess from './ClaudeAccess.jsx';
 import { useConfirm } from '../context/confirm.jsx';
 import { useToast } from '../context/toast.jsx';
 import { fmtDate, fmtDateTime, initials, plural } from '../lib/format.js';
@@ -425,6 +426,8 @@ export default function SettingsPage({ theme, onTheme, onMenu }) {
             />
           </div>
         </Section>
+
+        <ClaudeAccess />
 
         <LoginHistory />
 

@@ -44,6 +44,32 @@ const insertItem = async (db, userId, it, { legacyEntryId = null } = {}) => {
   return r.rows[0];
 };
 
+const ITEM_NOT_FOUND = 'Item not found. It may have been deleted.';
+
+// The one item update path (web and agent API): in a transaction, lock the user's item,
+// let `authorize(db, oldRow)` veto the change by throwing, copy the current version into
+// item_history, then apply {collectionId, type, encrypted}. Returns the updated row.
+const updateItem = (pool, userId, itemId, it, authorize) => withTx(pool, async (db) => {
+  const cur = await db.query(
+    'SELECT * FROM items WHERE id = $1 AND user_id = $2 FOR UPDATE',
+    [itemId, userId],
+  );
+  const old = cur.rows[0];
+  if (!old) throw new HttpError(404, ITEM_NOT_FOUND);
+  if (authorize) await authorize(db, old);
+  await db.query(
+    `INSERT INTO item_history (item_id, user_id, collection_id, type, encrypted, version_updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [old.id, old.user_id, old.collection_id, old.type, old.encrypted, old.updated_at],
+  );
+  const r = await db.query(
+    `UPDATE items SET collection_id = $1, type = $2, encrypted = $3, updated_at = now()
+     WHERE id = $4 AND user_id = $5 RETURNING *`,
+    [it.collectionId, it.type, it.encrypted, old.id, userId],
+  );
+  return r.rows[0];
+});
+
 const createVaultRouter = ({ pool, session }) => {
   const router = express.Router();
   const guard = [session.requireSession, session.requireV2];
@@ -58,7 +84,7 @@ const createVaultRouter = ({ pool, session }) => {
     next();
   };
 
-  const NOT_FOUND = 'Item not found. It may have been deleted.';
+  const NOT_FOUND = ITEM_NOT_FOUND;
 
   router.get('/collections', guard, ah(async (req, res) => {
     const r = await pool.query(
@@ -116,27 +142,10 @@ const createVaultRouter = ({ pool, session }) => {
     const err = checkItem(it, { withId: false });
     if (err) throw new HttpError(400, err);
 
-    const row = await withTx(pool, async (db) => {
-      const cur = await db.query(
-        'SELECT * FROM items WHERE id = $1 AND user_id = $2 FOR UPDATE',
-        [req.params.id, req.user.id],
-      );
-      const old = cur.rows[0];
-      if (!old) throw new HttpError(404, NOT_FOUND);
+    const row = await updateItem(pool, req.user.id, req.params.id, it, async (db) => {
       if (!(await ownsCollection(db, req.user.id, it.collectionId))) {
         throw new HttpError(400, 'That collection does not exist in your vault.');
       }
-      await db.query(
-        `INSERT INTO item_history (item_id, user_id, collection_id, type, encrypted, version_updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [old.id, old.user_id, old.collection_id, old.type, old.encrypted, old.updated_at],
-      );
-      const r = await db.query(
-        `UPDATE items SET collection_id = $1, type = $2, encrypted = $3, updated_at = now()
-         WHERE id = $4 AND user_id = $5 RETURNING *`,
-        [it.collectionId, it.type, it.encrypted, old.id, req.user.id],
-      );
-      return r.rows[0];
     });
     res.json(toItem(row));
   }));
@@ -190,4 +199,6 @@ const createVaultRouter = ({ pool, session }) => {
   return router;
 };
 
-module.exports = { createVaultRouter, checkItem, insertCollections, insertItem };
+module.exports = {
+  createVaultRouter, checkItem, insertCollections, insertItem, updateItem, ITEM_NOT_FOUND,
+};

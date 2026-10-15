@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertTriangle, Bot, ChevronLeft, Download, File, History, Link2, Loader2, Pencil, RotateCcw, Star, Trash2,
 } from 'lucide-react';
@@ -156,6 +156,70 @@ function HistorySection({ item, collectionName }) {
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const VIA = { mcp: 'MCP', cli: 'Command line' };
+
+function ClaudeReads({ item }) {
+  const { getReads } = useVault();
+  const [reads, setReads] = useState(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      setReads(await getReads(item.id));
+    } catch (err) {
+      setError(err.message || 'Could not load the Claude reads. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // Load once per item; the parent remounts this section for another item.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="sec">
+      <h3>
+        <Icon icon={Bot} />
+        Claude reads
+        {(reads || error) && (
+          <button type="button" className="sec-act link-btn" onClick={load} disabled={busy}>
+            Refresh
+          </button>
+        )}
+      </h3>
+      {error ? (
+        <p className="err">{error}</p>
+      ) : !reads ? (
+        <p className="quiet">Loading…</p>
+      ) : reads.length === 0 ? (
+        <p className="quiet">Claude access starts once the ALFRED connector is set up.</p>
+      ) : (
+        <div className="log">
+          {reads.map((r) => (
+            <div className="log-r" key={r.id}>
+              <time dateTime={r.createdAt || undefined}>{fmtDateTime(r.createdAt)}</time>
+              <span className="what">
+                {r.field === '*' ? 'All fields' : r.field === 'unknown' ? 'Unknown field' : r.field}
+                {' · '}
+                {r.agentName || 'Deleted device'}
+              </span>
+              <span className="via" title={r.host || undefined}>
+                {VIA[r.via] || r.via || '—'}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -367,15 +431,7 @@ export default function ItemDetail({ item, collection, collectionsById, itemsByI
           </div>
         )}
 
-        {collection?.agentAccess && (
-          <div className="sec">
-            <h3>
-              <Icon icon={Bot} />
-              Claude reads
-            </h3>
-            <p className="quiet">Claude access starts once the ALFRED connector is set up.</p>
-          </div>
-        )}
+        {collection?.agentAccess && !item.decryptError && <ClaudeReads key={item.id} item={item} />}
 
         {!item.decryptError && <HistorySection key={item.updatedAt} item={item} collectionName={collectionName} />}
 

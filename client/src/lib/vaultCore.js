@@ -3,6 +3,8 @@
 import { uuidv4 } from '../crypto/bytes.js';
 import { newKey, wrapCollectionKey, unwrapCollectionKey, sealItem, openItem } from '../crypto/keys.js';
 import { getVaultKey, getCollectionKey, setCollectionKey } from '../crypto/keystore.js';
+import { createDeviceCredentials, agentToken, agentWrapKey, wrapGrant, buildConnectionString, openRead } from '../crypto/agent.js';
+import { zero } from '../crypto/bytes.js';
 import { toPayload, decryptedItem, unreadableItem, validateDraft, sortItems } from './itemModel.js';
 
 const PAYLOAD_KEYS = ['title', 'fields', 'notes', 'tags', 'project', 'favorite', 'status', 'supersededBy', 'links', 'attachments'];
@@ -131,6 +133,74 @@ export async function createCollectionOp(api, name) {
   const { data: row } = await api.post('/collections', { id, name: clean, kind: 'custom', agentAccess: false, wrappedKey });
   setCollectionKey(id, key);
   return publicCollection(row);
+}
+
+// --- Claude access (spec §8) ---
+
+export function publicAgent(a) {
+  return {
+    id: a.id,
+    name: a.name,
+    canWrite: a.canWrite === true,
+    createdAt: a.createdAt ?? null,
+    lastUsedAt: a.lastUsedAt ?? null,
+    revokedAt: a.revokedAt ?? null,
+    collectionIds: Array.isArray(a.collectionIds) ? a.collectionIds : [],
+  };
+}
+
+export async function listAgentsOp(api) {
+  const { data } = await api.get('/agents');
+  return (data || []).map(publicAgent);
+}
+
+// Generates the device credentials in the browser, wraps each chosen collection key for the
+// device, registers it, and returns the one-time connection string.
+export async function createAgentOp(api, { name, collectionIds, canWrite }, server) {
+  const clean = String(name ?? '').trim();
+  if (!clean) throw new Error('Give the device a name.');
+  if (clean.length > 60) throw new Error('Use a device name of 60 characters or fewer.');
+  const ids = [...new Set(collectionIds || [])];
+  if (!ids.length) throw new Error('Choose at least one collection.');
+  const { agentId, deviceSecret } = createDeviceCredentials();
+  const wrapKey = agentWrapKey(deviceSecret);
+  try {
+    const grants = ids.map((collectionId) => ({
+      collectionId,
+      wrappedKey: wrapGrant(wrapKey, getCollectionKey(collectionId), agentId, collectionId),
+    }));
+    const token = agentToken(deviceSecret);
+    const { data: row } = await api.post('/agents', { id: agentId, name: clean, canWrite: canWrite === true, token, grants });
+    const connectionString = buildConnectionString({ server, agentId, name: clean, deviceSecret });
+    return { agent: publicAgent({ collectionIds: ids, ...row }), connectionString };
+  } finally {
+    zero(wrapKey);
+    zero(deviceSecret);
+  }
+}
+
+export async function revokeAgentOp(api, id) {
+  const { data: row } = await api.delete(`/agents/${id}`);
+  return publicAgent(row);
+}
+
+// Rows that cannot be opened stay listed with field "unknown".
+export async function getReadsOp(api, item, limit = 50) {
+  const { data } = await api.get(`/items/${item.id}/reads?limit=${limit}`);
+  return (data || []).map((r) => {
+    let field = 'unknown';
+    let via = '';
+    let host = '';
+    try {
+      const p = openRead(getCollectionKey(item.collectionId), item.id, r.id, r.encrypted);
+      if (typeof p?.field === 'string' && p.field) field = p.field;
+      if (typeof p?.via === 'string') via = p.via;
+      if (typeof p?.host === 'string') host = p.host;
+    } catch {
+      /* keep the row, unreadable */
+    }
+    return { id: r.id, createdAt: r.createdAt ?? null, agentName: r.agentName ?? null, field, via, host };
+  });
 }
 
 export async function readFileText(file) {

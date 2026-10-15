@@ -70,4 +70,37 @@ const toLoginLog = (r) => ({
   createdAt: r.created_at,
 });
 
-module.exports = { toUser, toKdf, toSession, toCollection, toItem, toHistory, toLegacyEntry, toLoginLog };
+// r.collection_ids comes from array_agg over agent_grants.
+const toAgent = (r) => ({
+  id: r.id,
+  name: r.name,
+  canWrite: r.can_write,
+  createdAt: r.created_at,
+  lastUsedAt: r.last_used_at,
+  revokedAt: r.revoked_at,
+  collectionIds: r.collection_ids || [],
+});
+
+// r.agent_name comes from a LEFT JOIN on agents (null once the agent row is gone).
+const toItemRead = (r) => ({
+  id: r.id,
+  agentId: r.agent_id,
+  agentName: r.agent_name ?? null,
+  encrypted: r.encrypted,
+  createdAt: r.created_at,
+});
+
+// The agent API's item shape (§8.3): no legacy id, never trashed.
+const toAgentItem = (r) => ({
+  id: r.id,
+  collectionId: r.collection_id,
+  type: r.type,
+  encrypted: r.encrypted,
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+});
+
+module.exports = {
+  toUser, toKdf, toSession, toCollection, toItem, toHistory, toLegacyEntry, toLoginLog,
+  toAgent, toItemRead, toAgentItem,
+};

@@ -315,6 +315,64 @@
   white-space: nowrap;
 }
 
+/* Claude access */
+.agent-r h4 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.agent-r .agent-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
+  color: var(--faint);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-r.revoked h4,
+.agent-r.revoked p {
+  color: var(--faint);
+}
+
+.opt-list {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.opt-list > legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.opt-list .check {
+  min-height: var(--ctl-h);
+}
+
+.conn-str {
+  padding: var(--s3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--sunk);
+  color: var(--fg);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  word-break: break-all;
+  user-select: all;
+  -webkit-user-select: all;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.log-r .via {
+  color: var(--faint);
+  font-size: 12px;
+}
+
 /* Generator */
 .gen-out {
   display: flex;

@@ -1,0 +1,7 @@
+{
+  "description": "Spec §8.1 test vectors. deviceSecret is bytes 0..31. agentToken = base64url(HKDF-SHA256(deviceSecret, empty salt, \"wreckvault/v2/agent-auth\", 32)); agentWrapKey = HKDF-SHA256(deviceSecret, empty salt, \"wreckvault/v2/agent-wrap\", 32).",
+  "deviceSecretHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "deviceSecretBase64Url": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+  "agentToken": "f3st6G0FA53JBeDKYLVuWtDRx7dnU9Tb0oVkLIau2po",
+  "agentWrapKeyHex": "b5489fcd8cb43451fac956f7c6854f5f380f0a817dac714b7c1370a49eaeb7fd"
+}

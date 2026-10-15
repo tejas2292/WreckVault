@@ -1,0 +1,27 @@
+{
+  "name": "wreckvault-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "wv: WreckVault agent CLI and MCP server for Claude Code",
+  "type": "module",
+  "bin": {
+    "wv": "dist/wv.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "esbuild src/cli.js --bundle --platform=node --format=esm --target=node18 --outfile=dist/wv.mjs --legal-comments=none \"--banner:js=#!/usr/bin/env node\nimport { createRequire as __wvCreateRequire } from 'node:module';\nconst require = __wvCreateRequire(import.meta.url);\"",
+    "test": "npm run build && vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "@noble/ciphers": "1.2.1",
+    "@noble/hashes": "1.7.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "vitest": "1.6.0"
+  }
+}

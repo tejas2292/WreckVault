@@ -8,6 +8,7 @@ import { downloadJson, dateStamp } from '../lib/download.js';
 import {
   loadVault, createItemOp, updateItemOp, trashItemOp, restoreItemOp, deleteForeverOp,
   getHistoryOp, createCollectionOp, personalCollectionId, readFileText, sortCollections,
+  listAgentsOp, createAgentOp, revokeAgentOp, getReadsOp,
 } from '../lib/vaultCore.js';
 
 const VaultContext = createContext(null);
@@ -126,6 +127,28 @@ export function VaultProvider({ children }) {
     return c;
   }, 'Could not create the collection. Try again.'), [guard, setCollections]);
 
+  // Claude access (spec §8.3). The connection string goes back to the caller once and is
+  // never kept in state.
+  const listAgents = useCallback(() => guard(
+    () => listAgentsOp(api),
+    'Could not load the connected devices. Try again.',
+  ), [guard]);
+
+  const createAgent = useCallback(({ name, collectionIds, canWrite }) => guard(() => createAgentOp(
+    api, { name, collectionIds, canWrite }, window.location.origin,
+  ), 'Could not connect the device. Try again.'), [guard]);
+
+  const revokeAgent = useCallback((id) => guard(
+    () => revokeAgentOp(api, id),
+    'Could not revoke the device. Try again.',
+  ), [guard]);
+
+  const getReads = useCallback((itemId) => guard(async () => {
+    const item = find(itemId);
+    if (!item) throw new Error('That item no longer exists.');
+    return getReadsOp(api, item);
+  }, 'Could not load the Claude reads. Try again.'), [guard]);
+
   const exportVault = useCallback(() => {
     const filename = `wreckvault-export-${dateStamp()}.json`;
     downloadJson(filename, buildExport(itemsRef.current));
@@ -155,8 +178,10 @@ export function VaultProvider({ children }) {
     items, collections, loading, error,
     createItem, updateItem, toggleFavorite, trashItem, restoreItem, deleteForever,
     getHistory, restoreVersion, exportVault, importFile, refresh, createCollection,
+    listAgents, createAgent, revokeAgent, getReads,
   }), [items, collections, loading, error, createItem, updateItem, toggleFavorite, trashItem,
-    restoreItem, deleteForever, getHistory, restoreVersion, exportVault, importFile, refresh, createCollection]);
+    restoreItem, deleteForever, getHistory, restoreVersion, exportVault, importFile, refresh, createCollection,
+    listAgents, createAgent, revokeAgent, getReads]);
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>;
 }

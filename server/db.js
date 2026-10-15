@@ -13,7 +13,7 @@ const createPool = (connectionString = process.env.DATABASE_URL) => {
 
 const pool = createPool();
 
-// v1 schema (unchanged) followed by the additive v2 migrations from docs/V2-SPEC.md §1.
+// v1 schema (unchanged) followed by the additive v2 migrations from docs/V2-SPEC.md §1 and §8.2.
 // Nothing here drops, truncates, deletes from or updates existing rows.
 const V1_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS users (
@@ -92,9 +92,38 @@ const V2_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_item_history_item ON item_history (item_id)`,
 ];
 
+// Agent connector (docs/V2-SPEC.md §8.2). Additive only.
+const AGENT_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS agents (
+     id UUID PRIMARY KEY,
+     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     name TEXT NOT NULL,
+     token_hash TEXT NOT NULL,
+     can_write BOOLEAN NOT NULL DEFAULT false,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+     last_used_at TIMESTAMPTZ,
+     revoked_at TIMESTAMPTZ
+   )`,
+  `CREATE TABLE IF NOT EXISTS agent_grants (
+     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+     collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+     wrapped_key TEXT NOT NULL,
+     PRIMARY KEY (agent_id, collection_id)
+   )`,
+  `CREATE TABLE IF NOT EXISTS item_reads (
+     id UUID PRIMARY KEY,
+     item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     agent_id UUID REFERENCES agents(id) ON DELETE SET NULL,
+     encrypted TEXT NOT NULL,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
+  `CREATE INDEX IF NOT EXISTS idx_item_reads_item ON item_reads (item_id, created_at DESC)`,
+];
+
 // Runs every migration and makes sure the JWT secret exists. Safe to run on every boot.
 const migrate = async (db) => {
-  for (const sql of [...V1_STATEMENTS, ...V2_STATEMENTS]) {
+  for (const sql of [...V1_STATEMENTS, ...V2_STATEMENTS, ...AGENT_STATEMENTS]) {
     await db.query(sql);
   }
   await db.query(

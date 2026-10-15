@@ -18,6 +18,15 @@ const isNonEmptyString = (v, max = Infinity) =>
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isItemType = (v) => typeof v === 'string' && ITEM_TYPES.includes(v);
 
+// A sealed blob from §3: "wv1." + base64(nonce12) + "." + base64(ciphertext||tag).
+const SEALED_RE = /^wv1\.[A-Za-z0-9+/]+={0,2}\.[A-Za-z0-9+/]+={0,2}$/;
+const isSealed = (v) => typeof v === 'string' && SEALED_RE.test(v);
+
+// base64url (RFC 4648 §5, no padding) of exactly 32 bytes, in canonical form.
+const isBase64Url32 = (v) => typeof v === 'string'
+  && /^[A-Za-z0-9_-]{43}$/.test(v)
+  && Buffer.from(v, 'base64url').toString('base64url') === v;
+
 // {salt, params}: salt = base64 of 16 bytes, params = an object.
 const isKdf = (kdf) => {
   if (!isPlainObject(kdf) || typeof kdf.salt !== 'string' || !isPlainObject(kdf.params)) return false;
@@ -53,6 +62,8 @@ module.exports = {
   isNonEmptyString,
   isPlainObject,
   isItemType,
+  isSealed,
+  isBase64Url32,
   isKdf,
   checkCollections,
 };

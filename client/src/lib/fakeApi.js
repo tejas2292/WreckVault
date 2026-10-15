@@ -12,7 +12,7 @@ function httpError(status, error) {
 export function createFakeApi({ v1Users = [] } = {}) {
   let clock = Date.parse('2026-01-01T00:00:00.000Z');
   const now = () => new Date((clock += 1000)).toISOString();
-  const db = { users: [], collections: [], items: [], history: [], entries: [] };
+  const db = { users: [], collections: [], items: [], history: [], entries: [], agents: [], grants: [], reads: [] };
   let session = null; // {uid, v}
   let historySeq = 0;
   const calls = [];
@@ -46,6 +46,10 @@ export function createFakeApi({ v1Users = [] } = {}) {
   const ownCollection = (u, id) => {
     if (!db.collections.some((c) => c.id === id && c.userId === u.id)) throw httpError(400, 'Unknown collection');
   };
+  const agentOut = (a) => ({
+    id: a.id, name: a.name, canWrite: a.canWrite, createdAt: a.createdAt, lastUsedAt: a.lastUsedAt, revokedAt: a.revokedAt,
+    collectionIds: db.grants.filter((g) => g.agentId === a.id).map((g) => g.collectionId),
+  });
   const addCollections = (u, list) => list.forEach((c, i) => db.collections.push({
     id: c.id, userId: u.id, name: c.name, kind: c.kind, agentAccess: c.agentAccess, wrappedKey: c.wrappedKey, sort: i, createdAt: now(),
   }));
@@ -110,6 +114,20 @@ export function createFakeApi({ v1Users = [] } = {}) {
       const { userId, ...c } = db.collections.at(-1); // eslint-disable-line no-unused-vars
       return c;
     },
+    'GET /agents': () => {
+      const u = v2();
+      return db.agents.filter((a) => a.userId === u.id).reverse().map(agentOut);
+    },
+    'POST /agents': (b) => {
+      const u = v2();
+      const name = String(b.name || '');
+      if (name.length < 1 || name.length > 60) throw httpError(400, 'Name must be 1 to 60 characters');
+      if (!Array.isArray(b.grants) || !b.grants.length) throw httpError(400, 'Choose at least one collection');
+      for (const g of b.grants) ownCollection(u, g.collectionId);
+      db.agents.push({ id: b.id, userId: u.id, name, canWrite: b.canWrite === true, token: b.token, createdAt: now(), lastUsedAt: null, revokedAt: null });
+      for (const g of b.grants) db.grants.push({ agentId: b.id, collectionId: g.collectionId, wrappedKey: g.wrappedKey });
+      return agentOut(db.agents.at(-1));
+    },
     'GET /items': () => {
       const u = v2();
       return db.items.filter((i) => i.userId === u.id).map(itemOut);
@@ -146,6 +164,19 @@ export function createFakeApi({ v1Users = [] } = {}) {
       ownItem(u, id);
       return db.history.filter((h) => h.itemId === id).reverse()
         .map((h) => ({ id: h.id, collectionId: h.collectionId, type: h.type, encrypted: h.encrypted, versionUpdatedAt: h.versionUpdatedAt, replacedAt: h.replacedAt }));
+    }],
+    ['DELETE', /^\/agents\/([^/]+)$/, (u, [id]) => {
+      const a = db.agents.find((x) => x.id === id && x.userId === u.id);
+      if (!a) throw httpError(404, 'Device not found');
+      if (!a.revokedAt) a.revokedAt = now();
+      return agentOut(a);
+    }],
+    ['GET', /^\/items\/([^/?]+)\/reads(?:\?limit=(\d+))?$/, (u, [id, limit]) => {
+      ownItem(u, id);
+      const n = Math.min(Number(limit) || 50, 200);
+      return db.reads.filter((r) => r.itemId === id).reverse().slice(0, n).map((r) => ({
+        id: r.id, agentId: r.agentId, agentName: db.agents.find((a) => a.id === r.agentId)?.name ?? null, encrypted: r.encrypted, createdAt: r.createdAt,
+      }));
     }],
   ];
 
