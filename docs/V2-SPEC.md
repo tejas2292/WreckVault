@@ -339,3 +339,132 @@ Copy: plain, specific, active voice; errors say what went wrong and how to fix i
 * CI (`.github/workflows/deploy.yml`): Node 20; client lint + unit tests + build; server
   tests against a `postgres:16` service container; deploy job unchanged except
   `docker compose -p wreckvault up -d --build`.
+
+---
+
+## 8. Agent connector (ALFRED access for Claude Code)
+
+A machine (a "device") gets read — and optionally write — access to chosen collections
+(normally only ALFRED) without the master password. Decryption happens on the device.
+
+### 8.1 Crypto (shared by web client and agent)
+
+```
+deviceSecret  = 32 random bytes                                    (created in the browser, shown once)
+agentId       = UUID v4                                            (created in the browser)
+agentToken    = base64url(HKDF-SHA256(deviceSecret, salt = empty, info = "wreckvault/v2/agent-auth", 32))
+agentWrapKey  = HKDF-SHA256(deviceSecret, salt = empty, info = "wreckvault/v2/agent-wrap", 32)
+grant.wrappedKey = seal(agentWrapKey, collectionKey, "wreckvault/v2/agent-grant:" + agentId + ":" + collectionId)
+read.encrypted   = seal(collectionKey, UTF-8(JSON {field, via, host}), "wreckvault/v2/read:" + itemId + ":" + readId)
+connection string = "wvagent1:" + base64url(UTF-8(JSON {v:1, server:<origin>, agentId, name, secret:base64url(deviceSecret)}))
+```
+
+base64url = RFC 4648 §5 without padding. `seal`/`open` and item AAD exactly as §3. `via` ∈
+`mcp | cli`; `field` = the field label read, or `"*"` for the whole item; `host` = the
+device's hostname.
+
+### 8.2 Schema (additive)
+
+```sql
+CREATE TABLE IF NOT EXISTS agents (
+  id UUID PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  token_hash TEXT NOT NULL,                 -- hex SHA-256 of agentToken
+  can_write BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_used_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ
+);
+CREATE TABLE IF NOT EXISTS agent_grants (
+  agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  wrapped_key TEXT NOT NULL,
+  PRIMARY KEY (agent_id, collection_id)
+);
+CREATE TABLE IF NOT EXISTS item_reads (
+  id UUID PRIMARY KEY,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  agent_id UUID REFERENCES agents(id) ON DELETE SET NULL,
+  encrypted TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_item_reads_item ON item_reads (item_id, created_at DESC);
+```
+
+### 8.3 API
+
+Web (cookie session, v2, CSRF header as §2):
+
+| Method & path | Body | Response |
+|---|---|---|
+| `GET /agents` | – | `[{id, name, canWrite, createdAt, lastUsedAt, revokedAt, collectionIds:[...]}]` newest first |
+| `POST /agents` | `{id, name, canWrite, token, grants:[{collectionId, wrappedKey}]}` | the row (server stores only SHA-256(token)); 400 if a collection isn't the user's or grants is empty; name 1–60 chars |
+| `DELETE /agents/:id` | – | sets `revoked_at` (idempotent); returns the row |
+| `GET /items/:id/reads?limit=50` | – | `[{id, agentId, agentName, encrypted, createdAt}]` newest first (max 200) |
+
+Agent API (no cookie, no CSRF header; `Authorization: Bearer wva1.<agentId>.<agentToken>`;
+unknown/revoked/mismatched token → 401 `{error}`; failed auths limited to 20 / 15 min / IP;
+`last_used_at` updated at most once a minute):
+
+| Method & path | Body | Response |
+|---|---|---|
+| `GET /agent/v1/me` | – | `{agent:{id, name, canWrite}, collections:[{id, name, kind, wrappedKey}]}` — only granted collections, `wrappedKey` = the grant's agent-wrapped key |
+| `GET /agent/v1/items` | – | non-trashed items in granted collections: `[{id, collectionId, type, encrypted, createdAt, updatedAt}]` |
+| `POST /agent/v1/items` | `{id, collectionId, type, encrypted}` | 403 unless `canWrite` and collection granted; else as `POST /items` |
+| `PUT /agent/v1/items/:id` | `{collectionId, type, encrypted}` | 403 unless `canWrite` and both the current and the new collection are granted; history copy as `PUT /items/:id` |
+| `POST /agent/v1/items/:id/reads` | `{id, encrypted}` | 404 unless the item is in a granted collection; inserts into `item_reads`; `{ok:true}` |
+
+### 8.4 Web UI
+
+* Settings → **Claude access**: list of devices (name, collections, read-only / read and
+  write, last used, created; revoked ones greyed). **Connect a device** dialog: device
+  name (default the browser can't know — placeholder "e.g. MacBook Air"), collections
+  (ALFRED ticked; Personal allowed but with a plain warning), permission (Read only /
+  Read and write, default Read and write), then **Create connection**: shows the
+  connection string once with Copy and the one-line install hint
+  `wv login` (paste it there). Revoke with in-app confirm.
+* Item detail "Claude reads": decrypt `GET /items/:id/reads` for items whose collection has
+  `agentAccess`; rows show time, field, device name, via. Keep the existing empty state.
+
+### 8.5 Agent package (`agent/`, bundled to one file `agent/dist/wv.mjs`)
+
+Node ≥ 18, ESM. Commands:
+
+```
+wv login [connection-string]   # prompts (hidden) if omitted; verifies with GET /agent/v1/me; saves config
+wv logout                      # deletes saved config and cache
+wv status                      # server, device name, permission, collections, item count, cache age
+wv ls [query] [--type T] [--project P] [--json]
+wv get <item> [field]          # prints the value only (no trailing newline when stdout is not a TTY); logs a read
+wv show <item> [--reveal]      # all fields; secrets masked unless --reveal (which logs a "*" read)
+wv mcp                         # stdio MCP server
+```
+
+`<item>` = item id, or a title matched case-insensitively (exact match wins; else a unique
+substring; ambiguous → exit 2 listing candidates). `[field]` = field label, case-insensitive;
+default = the first `secret` field. Exit codes: 0 ok, 1 error, 2 ambiguous/not found, 3 not
+logged in, 4 server unreachable and no cache.
+
+Config: `~/.config/wreckvault/agent.json` (Windows: `%APPDATA%\wreckvault\agent.json`),
+mode 0600, holding the connection string. On Windows the secret part is DPAPI-protected
+(PowerShell `ProtectedData`, CurrentUser). Env `WV_CONNECTION` overrides the file (for CI).
+
+Cache: `~/.cache/wreckvault/agent-cache.json` (Windows `%LOCALAPPDATA%`), 0600 — the raw
+`/me` + `/items` JSON (ciphertext only). Used when the server is unreachable; output then
+notes "offline, cached <age> ago". Reads made offline are queued in the cache and posted
+on the next successful call.
+
+MCP tools (server name `wreckvault`):
+
+| Tool | Input | Output |
+|---|---|---|
+| `wv_search` | `{query?, type?, project?, includeInactive?}` | items: id, title, type, project, tags, status, and fields as `{label, kind, value}` where secret/multi/totp values are replaced by `"[secret]"` |
+| `wv_get` | `{item, field?}` | the value(s) — one field, or all fields when `field` is `"*"`; logs a read. Description tells Claude to prefer the shell form `$(wv get "<item>" "<field>")` so the value never enters the transcript |
+| `wv_put` | `{type, title, fields:[{label, kind, value}], project?, tags?, notes?, collection?}` | creates in ALFRED (or the named granted collection); needs write |
+| `wv_update` | `{item, setFields?:[{label, kind?, value}], removeFields?:[label], title?, notes?, tags?, project?, status?, supersededBy?}` | updates; untouched payload keys preserved; needs write |
+| `wv_status` | `{}` | as `wv status` |
+
+Agent writes keep every payload key they don't change, and use §3 encryption with the
+collection key, so the web app reads them like any other item.
