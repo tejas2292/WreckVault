@@ -5,6 +5,7 @@ import path from 'node:path';
 const isWin = () => process.platform === 'win32';
 
 export function configFile() {
+  if (process.env.WV_CONFIG_FILE) return process.env.WV_CONFIG_FILE;
   if (isWin()) {
     const base = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
     return path.join(base, 'wreckvault', 'agent.json');

@@ -1293,6 +1293,7 @@ var init_http = __esm({
 import os from "node:os";
 import path from "node:path";
 function configFile() {
+  if (process.env.WV_CONFIG_FILE) return process.env.WV_CONFIG_FILE;
   if (isWin()) {
     const base = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
     return path.join(base, "wreckvault", "agent.json");
@@ -1406,12 +1407,41 @@ function dpapi(op, bytes) {
   }
   return fromBase64(res.stdout.trim());
 }
+function secretStore() {
+  if (process.env.WV_SECRET_STORE === "file") return "file";
+  if (process.platform === "darwin") return "keychain";
+  if (process.platform === "win32") return "dpapi";
+  return "file";
+}
+function keychainSave(agentId, secretText) {
+  const cmd = `add-generic-password -U -s ${KC_SERVICE} -a ${agentId} -l "WreckVault agent" -w ${secretText}
+`;
+  const res = spawnSync("security", ["-i"], { input: cmd, encoding: "utf8", timeout: 3e4 });
+  if (res.error || res.status !== 0) {
+    throw new WvError(`macOS Keychain refused to store the device secret: ${(res.stderr || res.error?.message || "").trim() || "unknown error"}`);
+  }
+}
+function keychainLoad(agentId) {
+  const res = spawnSync("security", ["find-generic-password", "-s", KC_SERVICE, "-a", agentId, "-w"], { encoding: "utf8", timeout: 3e4 });
+  if (res.error || res.status !== 0) {
+    throw new WvError("The device secret is not in the macOS Keychain (or the Keychain is locked). Unlock the Mac, or run `wv login` again.", EXIT.NOT_LOGGED_IN);
+  }
+  return res.stdout.trim();
+}
+function keychainDelete(agentId) {
+  spawnSync("security", ["delete-generic-password", "-s", KC_SERVICE, "-a", agentId], { encoding: "utf8", timeout: 3e4 });
+}
 function loadConnection() {
   const env = process.env.WV_CONNECTION;
   if (env && env.trim()) return { ...parseConnection(env), source: "env" };
   const cfg = readJson(configFile());
   if (!cfg) throw new WvError("Not logged in. Run `wv login` and paste the connection string from WreckVault \u2192 Settings \u2192 Claude access.", EXIT.NOT_LOGGED_IN);
   if (cfg.connection) return { ...parseConnection(cfg.connection), source: "file" };
+  if (cfg.store === "keychain") {
+    const secret = keychainLoad(cfg.agentId);
+    const parsed = parseConnection(`wvagent1:${Buffer.from(JSON.stringify({ v: 1, server: cfg.server, agentId: cfg.agentId, name: cfg.name, secret })).toString("base64url")}`);
+    return { ...parsed, source: "file" };
+  }
   if (cfg.secretDpapi) {
     const secret = dpapi("Unprotect", fromBase64(cfg.secretDpapi));
     return { ...parseConnection(formatConnection({ server: cfg.server, agentId: cfg.agentId, name: cfg.name, secret })), source: "file" };
@@ -1420,7 +1450,12 @@ function loadConnection() {
 }
 function saveConnection(conn) {
   const file2 = configFile();
-  if (process.platform === "win32") {
+  const store = secretStore();
+  if (store === "keychain") {
+    const secretText = JSON.parse(Buffer.from(formatConnection(conn).slice("wvagent1:".length), "base64url").toString("utf8")).secret;
+    keychainSave(conn.agentId, secretText);
+    writePrivateJson(file2, { v: 2, server: conn.server, agentId: conn.agentId, name: conn.name, store: "keychain" });
+  } else if (store === "dpapi") {
     writePrivateJson(file2, {
       v: 1,
       server: conn.server,
@@ -1433,7 +1468,12 @@ function saveConnection(conn) {
   }
   return file2;
 }
-var PS_PREFIX, deleteConnection;
+function deleteConnection() {
+  const cfg = readJson(configFile());
+  if (cfg?.store === "keychain" && cfg.agentId) keychainDelete(cfg.agentId);
+  return removeFile(configFile());
+}
+var PS_PREFIX, KC_SERVICE;
 var init_config = __esm({
   "src/config.js"() {
     init_paths();
@@ -1442,7 +1482,7 @@ var init_config = __esm({
     init_crypto();
     init_errors();
     PS_PREFIX = "Add-Type -AssemblyName System.Security; $b = [Convert]::FromBase64String([Console]::In.ReadToEnd().Trim()); ";
-    deleteConnection = () => removeFile(configFile());
+    KC_SERVICE = "wreckvault-agent";
   }
 });
 
