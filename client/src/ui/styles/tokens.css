@@ -1,0 +1,143 @@
+/* WreckVault design tokens. Every colour, size and radius used by the UI is defined here once.
+   Light values sit on :root; dark values apply when the system prefers dark (unless the person
+   picked light) and whenever the person picked dark. */
+
+:root {
+  /* spacing */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s8: 32px;
+
+  /* type */
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-md: 14px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --lh-body: 1.45;
+  --lh-head: 1.2;
+  --ls-head: -0.015em;
+  --ls-label: 0.07em;
+
+  /* radius */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 11px;
+  --r-xl: 14px;
+  --r-pill: 999px;
+
+  /* fonts */
+  --f-ui: 'Geist Variable', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --f-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* layout */
+  --frame-gap: 12px;
+  --side-w: 232px;
+  --list-w: 340px;
+  --detail-max: 760px;
+  --label-col: 160px;
+  --nav-h: 32px;
+  --row-h: 56px;
+  --field-h: 44px;
+  --ctl-h: 34px;
+  --ib: 30px;
+  --tap: 44px;
+
+  /* colour: light */
+  --bg: #EEF0F2;
+  --panel: #FFFFFF;
+  --sunk: #F4F5F7;
+  --line: #E2E5E9;
+  --line-strong: #CDD2D8;
+  --fg: #15181C;
+  --muted: #5B636D;
+  --faint: #8B939D;
+  --accent: #94631A;
+  --accent-fg: #FFFFFF;
+  --accent-soft: #F5EBDA;
+  --accent-line: #E3CDA6;
+  --ok: #1D7148;
+  --ok-soft: #E3F2EA;
+  --warn: #995500;
+  --warn-soft: #FBEFD9;
+  --bad: #B42318;
+  --bad-soft: #FBE7E5;
+  --info: #2C5A86;
+  --info-soft: #E3ECF6;
+  --scrim: rgba(10, 12, 14, 0.45);
+  --hover: color-mix(in srgb, var(--line) 60%, transparent);
+  --shadow: 0 1px 2px rgba(20, 24, 28, 0.06), 0 8px 28px rgba(20, 24, 28, 0.08);
+  --shadow-sheet: 0 -8px 28px rgba(20, 24, 28, 0.12);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B0D0F;
+    --panel: #141719;
+    --sunk: #1A1E21;
+    --line: #262B30;
+    --line-strong: #353C42;
+    --fg: #E7E9EC;
+    --muted: #9BA3AC;
+    --faint: #69727B;
+    --accent: #D6A04A;
+    --accent-fg: #1A1206;
+    --accent-soft: #2B2215;
+    --accent-line: #5A4422;
+    --ok: #52C28C;
+    --ok-soft: #14281E;
+    --warn: #E3A23C;
+    --warn-soft: #2D2313;
+    --bad: #F07166;
+    --bad-soft: #321816;
+    --info: #7FA9D8;
+    --info-soft: #15212D;
+    --scrim: rgba(0, 0, 0, 0.6);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.45);
+    --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0B0D0F;
+  --panel: #141719;
+  --sunk: #1A1E21;
+  --line: #262B30;
+  --line-strong: #353C42;
+  --fg: #E7E9EC;
+  --muted: #9BA3AC;
+  --faint: #69727B;
+  --accent: #D6A04A;
+  --accent-fg: #1A1206;
+  --accent-soft: #2B2215;
+  --accent-line: #5A4422;
+  --ok: #52C28C;
+  --ok-soft: #14281E;
+  --warn: #E3A23C;
+  --warn-soft: #2D2313;
+  --bad: #F07166;
+  --bad-soft: #321816;
+  --info: #7FA9D8;
+  --info-soft: #15212D;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+/* Phones: larger controls and 16 px inputs so iOS does not zoom. */
+@media (max-width: 680px), (pointer: coarse) {
+  :root {
+    --ctl-h: 44px;
+    --ib: 44px;
+    --nav-h: 44px;
+  }
+}

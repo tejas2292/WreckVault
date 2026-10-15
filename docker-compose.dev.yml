@@ -1,0 +1,57 @@
+# Local end-to-end stack: Postgres 16 + API + client. Never used in production.
+#   docker compose -f docker-compose.dev.yml -p wvdev up -d --build
+#   open http://localhost:8088
+# Postgres is published on host port 55432 for tests and the seed script:
+#   DATABASE_URL=postgres://wreckvault:wreckvault-dev-only@localhost:55432/wreckvault
+# Credentials below are throwaway, for this local stack only.
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: wreckvault
+      POSTGRES_PASSWORD: wreckvault-dev-only
+      POSTGRES_DB: wreckvault
+    ports:
+      - "55432:5432"
+    volumes:
+      - wvdev-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wreckvault -d wreckvault"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks:
+      - wvdev
+
+  # Service name must stay `backend-api`: client/nginx.conf proxies /api/ to it.
+  backend-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      PORT: "5000"
+      DATABASE_URL: postgres://wreckvault:wreckvault-dev-only@db:5432/wreckvault
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - wvdev
+
+  frontend-client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "8088:80"
+    depends_on:
+      - backend-api
+    networks:
+      - wvdev
+
+networks:
+  wvdev:
+    driver: bridge
+
+volumes:
+  wvdev-pgdata:

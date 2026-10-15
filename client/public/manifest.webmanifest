@@ -1,0 +1,13 @@
+{
+  "name": "WreckVault",
+  "short_name": "WreckVault",
+  "description": "A self-hosted, zero-knowledge vault for passwords, keys and server credentials.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#EEF0F2",
+  "theme_color": "#EEF0F2",
+  "icons": [
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

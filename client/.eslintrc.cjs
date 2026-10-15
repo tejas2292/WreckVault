@@ -17,7 +17,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['src/contexts/*.jsx'],
+      files: ['src/ui/context/*.jsx'],
       rules: { 'react-refresh/only-export-components': 'off' },
     },
   ],

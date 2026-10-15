@@ -1,162 +1,114 @@
-# 🛡️ WreckVault
-> **Your Digital Fortress. Zero Knowledge. Maximum Security.**
+# WreckVault
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)
-![React](https://img.shields.io/badge/react-%2320232a.svg?style=flat&logo=react&logoColor=%2361DAFB)
-![Node](https://img.shields.io/badge/node.js-6DA55F?style=flat&logo=node.js&logoColor=white)
-![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=flat&logo=postgresql&logoColor=white)
+A self-hosted, zero-knowledge password and secrets manager. The browser does all the
+encryption; the server stores ciphertext, ids, item types and timestamps, and never sees a
+master password, a key or an item's contents.
 
-WreckVault is a modern, self-hosted password manager built for those who want **total control** over their data. Unlike cloud providers, your secrets never leave your device unencrypted. We use a **Zero-Knowledge Architecture** where the server only stores encrypted blobs; the decryption key (your Master Password) exists *only* in your browser's memory.
+v2 adds typed items (logins, API keys, SSH hosts, databases, servers, VPNs, cloud
+credentials, webhooks, cards, secure notes, identities, Wi-Fi, licences), collections,
+version history, trash, and a one-time in-browser upgrade for v1 vaults. The full build
+contract is [docs/V2-SPEC.md](docs/V2-SPEC.md).
 
----
-
-## ✨ Features
-
-### Core Security
-- **🔐 Zero-Knowledge Encryption** — AES-256 encryption happens entirely on the client. The server *never* sees your passwords, card details, or notes in plaintext.
-- **🛡️ Master Password** — A single master password derives the encryption key. It never leaves your browser.
-
-### Vault Types
-- **🔑 Password Manager** — Store credentials with service name, username, website URL, and encrypted passwords.
-- **💳 Card Store** — Securely save credit/debit cards with live card preview, auto brand detection (Visa, Mastercard, Amex, Discover), and masked display.
-- **📝 Secure Notes** — Encrypted free-text notes for recovery codes, API keys, secrets, or anything sensitive.
-
-### Organisation & Productivity
-- **📂 Categories** — Organise entries into categories: Login, Server, Database, Network, Email, Development, DevOps, Cloud, Remote Access, Finance, Social, and Other.
-- **⭐ Favorites** — Star any entry for quick access. Filter the entire vault to show favorites only.
-- **🔍 Search** — Instant search across all entry types by name or username.
-- **🏷️ Type Tabs** — Switch between Passwords, Cards, and Notes with count badges.
-- **🎯 Category Filters** — Filter password entries by category with pill-style buttons.
-
-### Password Tools
-- **🎲 Password Generator** — Built-in generator with customisable length (8–64), and toggles for uppercase, lowercase, numbers, and symbols.
-- **📊 Password Strength Meter** — Real-time 6-level visual indicator (Very Weak → Excellent) with colour-coded feedback.
-
-### User Experience
-- **🎨 Glassmorphic Dark UI** — A premium, dark-themed interface with glass panels, gradient accents, and smooth animations.
-- **👤 Profile Page** — View stats (total passwords, member since, vault status), change profile image, and delete account.
-- **⚙️ Settings** — Auto-lock timer, vault export (JSON), and vault import.
-- **📋 One-Click Copy** — Copy passwords, card numbers, and notes to clipboard instantly.
-- **🐳 Dockerized** — Deploys in seconds with `docker-compose up`.
-- **🕸️ Open Source** — No hidden code. Audit the security yourself.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed on your machine.
-
-### Quick Start
-
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/tejas2292/WreckVault.git
-    cd WreckVault
-    ```
-
-2.  **Configure environment**
-    ```bash
-    cp server/.env.example server/.env
-    ```
-
-3.  **Ignite the Engine** 🏎️
-    ```bash
-    docker-compose up --build
-    ```
-
-4.  **Access the Vault**
-    Open your browser and navigate to:
-    👉 **[http://localhost:3000](http://localhost:3000)**
-
----
-
-## 🏗️ Tech Stack
-
-| Layer | Technology | Description |
-| :--- | :--- | :--- |
-| **Frontend** | React + Vite | Blazing fast UI with client-side routing. |
-| **Styling** | Vanilla CSS | Custom glassmorphic dark theme with CSS variables. |
-| **Backend** | Node.js + Express | Lightweight REST API for encrypted storage. |
-| **Database** | PostgreSQL | Robust relational data storage with auto-migrations. |
-| **Security** | Crypto-JS (AES-256) | Industry-standard client-side encryption. |
-| **Deployment** | Docker + GitHub Actions | Containerised with CI/CD pipeline. |
-
----
-
-## 📸 Screenshots
-
-| Login Screen |
-| :---: |
-| <img width="1916" height="913" alt="1" src="https://github.com/user-attachments/assets/259d9e61-0ecf-49db-a5bd-a0279938318b" /> |
-
-| Vault Dashboard |
-| :---: |
-| <img width="1918" height="915" alt="2" src="https://github.com/user-attachments/assets/4de5adc2-f27e-4f1c-a4c3-41d629d08014" /> |
-
----
-
-## 🛠️ Security Model
+## Architecture
 
 ```
-User → Master Password → Browser Key Derivation → AES-256 Encrypt/Decrypt
-                                    ↕
-                          Server (encrypted blobs only)
+browser ──HTTP──> client container (nginx:1.27, port 80)
+                    ├── /         built React SPA (Vite)
+                    └── /api/  ──> backend-api container (Node 20 + Express, port 5000)
+                                     └── PostgreSQL (external)
 ```
 
-1.  **User enters Master Password** — stored only in browser session memory.
-2.  **Key Derivation** — Browser derives a cryptographic key from the master password.
-3.  **Operations**:
-    - **Read**: Browser requests encrypted data → decrypts locally in the browser.
-    - **Write**: Browser encrypts data → sends only the ciphertext to the server.
-4.  **Result**: If the database is compromised, the attacker only sees encrypted blobs — no plaintext passwords, card numbers, or notes.
+- **client/** — React + Vite SPA, served by nginx with a strict CSP. nginx proxies `/api/`
+  to the API, so the app is same-origin.
+- **server/** — Express API. `app.js` builds the app (`createApp(pool)`), `index.js` boots
+  it, `db.js` holds the additive migrations and the cold-boot retry loop (30 tries × 5 s,
+  then exit 1 so Docker restarts it).
+- **Sessions** — an httpOnly, `SameSite=Strict` cookie holding a 12-hour HS256 JWT. Every
+  non-GET request must send `X-WV-Client: 1` (CSRF guard). Login attempts are rate limited
+  and recorded in `login_logs`.
+- **Registration** is open only while the server has no users, or when
+  `ALLOW_REGISTRATION=true`.
 
----
+## Cryptography (client side)
 
-## 📁 Project Structure
+- Master password → **Argon2id** (64 MiB, t=3, p=1, 16-byte salt) → master key.
+- **HKDF-SHA256** splits it into an encryption key and an auth key. Only `base64(authKey)`
+  is sent to the server, which stores a bcrypt hash of it.
+- A random **vault key** is sealed with the encryption key; each collection has a random
+  key sealed with the vault key; each item is sealed with its collection key.
+- Sealing is **AES-256-GCM** with a fresh 12-byte nonce and associated data that binds the
+  ciphertext to its item id and type.
+- It works over plain HTTP on a LAN (no `crypto.subtle` needed): `@noble/ciphers`,
+  `@noble/hashes`, `hash-wasm`, `crypto.getRandomValues`.
+
+**v1 → v2 upgrade.** v1 encrypted each entry with CryptoJS AES using the raw master
+password. On first v2 sign-in, the browser decrypts the v1 entries, re-encrypts them as v2
+items, verifies every one, makes the person download a backup, and only then calls
+`POST /api/auth/upgrade`. The server checks the upgrade covers every v1 entry exactly once.
+The v1 rows and the v1 password hash are never modified, so rolling back to v1 keeps working.
+
+## Local development
+
+Requires Docker and Node 20+.
+
+```bash
+# Postgres 16 (host port 55432) + API + client (http://localhost:8088)
+docker compose -f docker-compose.dev.yml -p wvdev up -d --build
+
+# Optional: a v1 user to try the upgrade with (alice / "correct horse battery staple")
+cd server && npm install
+DATABASE_URL=postgres://wreckvault:wreckvault-dev-only@localhost:55432/wreckvault npm run seed:legacy
+```
+
+The dev stack's credentials are throwaway and only for that local stack. To run the API
+outside Docker, copy `server/.env.example` to `server/.env` and point `DATABASE_URL` at a
+database; the server also reads plain environment variables, and `.env` is optional.
+
+| Variable | Meaning |
+|---|---|
+| `DATABASE_URL` | Postgres connection string (required) |
+| `PORT` | API port, default 5000 |
+| `ALLOW_REGISTRATION` | `true` keeps account creation open after the first user |
+
+## Tests
+
+Server tests use `node:test` and supertest against a real Postgres. Each test file creates
+its own throwaway database next to the one in `DATABASE_URL` and drops it afterwards, so
+the role needs `CREATEDB`:
+
+```bash
+cd server
+DATABASE_URL=postgres://wreckvault:wreckvault-dev-only@localhost:55432/wreckvault npm test
+```
+
+Client lint, unit tests and build: `npm run lint`, `npm test`, `npm run build` in `client/`.
+
+## Deploy
+
+Production uses `docker-compose.yml`: the API image bakes in the source and reads
+`DATABASE_URL` from `server/.env` on the host (`env_file`); the client image is a multi-stage
+build served by nginx. Ports: client `3011`, API `3012`. The API joins the external
+`postgresql_default` network to reach Postgres by container name.
+
+GitHub Actions (`.github/workflows/deploy.yml`) runs client lint, tests and build plus the
+server tests against a `postgres:16` service on every push to `main`, then a self-hosted
+runner deploys with `docker compose -p wreckvault up -d --build`.
+
+## Project layout
 
 ```
-WreckVault/
-├── client/                 # React frontend (Vite)
-│   └── src/
-│       ├── components/     # UI components
-│       │   ├── VaultDashboard.jsx
-│       │   ├── PasswordList.jsx
-│       │   ├── PasswordModal.jsx
-│       │   ├── PasswordStrength.jsx
-│       │   ├── CardList.jsx
-│       │   ├── CardModal.jsx
-│       │   ├── NoteList.jsx
-│       │   ├── NoteModal.jsx
-│       │   ├── ProfilePage.jsx
-│       │   └── SettingsPage.jsx
-│       ├── constants/      # Categories, config
-│       ├── contexts/       # Auth & Vault context providers
-│       └── utils/          # Encryption, clipboard, password generator
-├── server/                 # Node.js + Express backend
-│   ├── db.js               # PostgreSQL connection & migrations
-│   ├── index.js            # API routes
-│   └── Dockerfile
-├── docker-compose.yml
-└── .github/workflows/      # CI/CD deployment
+client/            React SPA, Dockerfile, nginx.conf
+server/
+  app.js           createApp(pool): middleware + routes
+  index.js         boot: migrate (with retry), then listen
+  db.js            pool, additive migrations, retry loop
+  routes/          auth.js (auth, upgrade, legacy), vault.js (collections, items)
+  lib/             session, validation, row mapping, helpers
+  scripts/         seed-legacy.js (dev only)
+  test/            node:test suites
+docs/V2-SPEC.md    the v2 contract
 ```
 
----
+## License
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
-
----
-
-<p align="center">
-  Built with ❤️ by Tejas
-</p>
+MIT
